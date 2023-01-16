@@ -80,9 +80,9 @@ int main(int argc, char *argv[])
     
     OpenSSL_add_all_algorithms();
     
-    st.cryptSt.encAlgorithm = strdup("aes-256-ctr");
+    st.cryptSt.encAlgorithm = strdup(DEFAULT_ENC);
     st.cryptSt.evpCipher = EVP_get_cipherbyname(st.cryptSt.encAlgorithm);
-    st.cryptSt.mdAlgorithm = strdup("sha512");
+    st.cryptSt.mdAlgorithm = strdup(DEFAULT_MD);
     st.cryptSt.evpDigest = EVP_get_digestbyname(st.cryptSt.mdAlgorithm);
 
     st.cryptSt.nFactor = DEFAULT_SCRYPT_N;

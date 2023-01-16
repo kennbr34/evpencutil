@@ -28,6 +28,10 @@
 
 #define MAX_PASS_SIZE 512
 
+#define DEFAULT_ENC "aes-256-ctr"
+
+#define DEFAULT_MD "sha512"
+
 #define DEFAULT_SCRYPT_N 1048576
 
 #define DEFAULT_SCRYPT_R 8

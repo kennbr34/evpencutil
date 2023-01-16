@@ -4,11 +4,11 @@ TESTFILE=$1
 KEYFILE=$2
 
 
-ENC_CLI="./encfileutil-cli -e -i $TESTFILE -o ${TESTFILE}.enc"
-DEC_CLI="./encfileutil-cli -d -i ${TESTFILE}.enc -o ${TESTFILE}.plain"
+ENC_CLI="./evpencutil-cli -e -i $TESTFILE -o ${TESTFILE}.enc"
+DEC_CLI="./evpencutil-cli -d -i ${TESTFILE}.enc -o ${TESTFILE}.plain"
 
-ENC_GUI="./encfileutil-gui -q -e -i $TESTFILE -o ${TESTFILE}.enc"
-DEC_GUI="./encfileutil-gui -q -d -i ${TESTFILE}.enc -o ${TESTFILE}.plain"
+ENC_GUI="./evpencutil-gui -q -e -i $TESTFILE -o ${TESTFILE}.enc"
+DEC_GUI="./evpencutil-gui -q -d -i ${TESTFILE}.enc -o ${TESTFILE}.plain"
 
 CMP_RES="cmp ${TESTFILE} ${TESTFILE}.plain"
 

@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
     
     st.guiSt.win = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     
-    gtk_window_set_title(GTK_WINDOW (st.guiSt.win), "YAXA File Encryption Utility");
+    gtk_window_set_title(GTK_WINDOW (st.guiSt.win), "EVP Enc Utility");
     
     GtkWidget *inputFileLabel = gtk_label_new ("Input File Path");
     st.guiSt.inputFileNameBox = gtk_entry_new ();
@@ -326,13 +326,11 @@ int main(int argc, char *argv[])
     st.guiSt.encAlgorithmComboBox = gtk_combo_box_text_new ();
     gtk_widget_set_tooltip_text (st.guiSt.encAlgorithmComboBox, "Choose encryption algorithm to use");
     OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, &st);
-    gtk_combo_box_set_active (GTK_COMBO_BOX (st.guiSt.encAlgorithmComboBox), 43);
     
     GtkWidget *mdAlgorithmLabel = gtk_label_new ("Message Digest Algorithm");
     st.guiSt.mdAlgorithmComboBox = gtk_combo_box_text_new ();
     gtk_widget_set_tooltip_text (st.guiSt.mdAlgorithmComboBox, "Choose digest algorithm to use");
     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, &st);
-    gtk_combo_box_set_active (GTK_COMBO_BOX (st.guiSt.mdAlgorithmComboBox), 31);
     
     GtkWidget *scryptWorkFactorsLabel = gtk_label_new ("scrypt work factors:");
     
@@ -480,10 +478,16 @@ int main(int argc, char *argv[])
     if(st.optSt.encAlgorithmGiven) {
         gtk_combo_box_text_prepend (GTK_COMBO_BOX_TEXT (st.guiSt.encAlgorithmComboBox), 0,st.cryptSt.encAlgorithm);
         gtk_combo_box_set_active (GTK_COMBO_BOX (st.guiSt.encAlgorithmComboBox), 0);
+    } else {
+        gtk_combo_box_text_prepend (GTK_COMBO_BOX_TEXT (st.guiSt.encAlgorithmComboBox), 0, DEFAULT_ENC);
+        gtk_combo_box_set_active (GTK_COMBO_BOX (st.guiSt.encAlgorithmComboBox), 0);
     }
     
     if(st.optSt.mdAlgorithmGiven) {
         gtk_combo_box_text_prepend (GTK_COMBO_BOX_TEXT (st.guiSt.mdAlgorithmComboBox), 0,st.cryptSt.mdAlgorithm);
+        gtk_combo_box_set_active (GTK_COMBO_BOX (st.guiSt.mdAlgorithmComboBox), 0);
+    } else {
+        gtk_combo_box_text_prepend (GTK_COMBO_BOX_TEXT (st.guiSt.mdAlgorithmComboBox), 0, DEFAULT_MD);
         gtk_combo_box_set_active (GTK_COMBO_BOX (st.guiSt.mdAlgorithmComboBox), 0);
     }
     
