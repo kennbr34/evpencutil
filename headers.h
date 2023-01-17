@@ -4,6 +4,9 @@
 #include <openssl/kdf.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
+#if OPENSSL_VERSION_MAJOR >= 3
+#include <openssl/provider.h>
+#endif
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
