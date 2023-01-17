@@ -105,7 +105,15 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
     
-    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (st->guiSt.encAlgorithmComboBox), obj->name);
+    /*Do not list authenticated or wrap modes since they will not work*/
+    if(!strstr(obj->name,"gcm") &&
+       !strstr(obj->name,"GCM") && 
+       !strstr(obj->name,"ccm") &&
+       !strstr(obj->name,"CCM") && 
+       !strstr(obj->name,"ocb") &&
+       !strstr(obj->name,"wrap")) {
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (st->guiSt.encAlgorithmComboBox), obj->name);
+    }
 }
 
 /*Lists available encryption algorithms in OpenSSL's EVP library*/
@@ -113,6 +121,9 @@ void mdListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
     
-    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (st->guiSt.mdAlgorithmComboBox), obj->name);
+    /*Do not list shake128 since it will not work*/
+    if(!strstr(obj->name,"shake128")) {
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (st->guiSt.mdAlgorithmComboBox), obj->name);
+    }
 }
 #endif
