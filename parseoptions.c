@@ -44,7 +44,6 @@ struct dataStruct *st
     char binName[MAX_FILE_NAME_SIZE];
     snprintf(binName,MAX_FILE_NAME_SIZE,"%s",argv[0]);
 
-    /*Process through arguments*/
     while (1) {
         int option_index = 0;
         static struct option long_options[] = {

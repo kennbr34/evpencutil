@@ -196,10 +196,8 @@ int workThread(char action, struct dataStruct *st)
     }
     
     if(action == 'e') {
-        /*Encrypt file and write it out*/
         doCrypt(inFile, outFile, fileSize,st);
     } else if (action == 'd') {
-        /*Now decrypt the cipher-text, disocounting the size of the MAC*/
         doCrypt(inFile, outFile, fileSize - MAC_SIZE,st);
     }
 

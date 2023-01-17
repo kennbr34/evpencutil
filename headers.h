@@ -53,14 +53,10 @@
 
 /*Do NOT change the order of these*/
 
-/*Macro defintions*/
 #include "macros.h"
 
-/*Global variable defintions*/
 #include "globals.h"
 
-/*Structure definitions*/
 #include "structs.h"
 
-/*Function prototypes*/
 #include "prototypes.h"

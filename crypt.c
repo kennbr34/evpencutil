@@ -13,11 +13,9 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         exit(EXIT_FAILURE);
     }
     
-    /*Initiate EVP*/
     EVP_CIPHER_CTX *evp_ctx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_init(evp_ctx);
     
-    /*Initiate HMAC*/
     HMAC_CTX *hmac_ctx = HMAC_CTX_new();
     HMAC_Init_ex(hmac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
     
@@ -93,7 +91,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         st->guiSt.totalBytes = st->guiSt.endBytes - st->guiSt.startBytes;
         
         double dataRate = (double)((double)st->guiSt.totalBytes/(double)st->guiSt.loopTime) / (1024*1024);
-        sprintf(st->guiSt.statusMessage,"%s %0.0f Mb/s, %0.0fs elapsed", strcmp(st->guiSt.encryptOrDecrypt,"encrypt") ? "Decrypting..." : "Encrypting...", dataRate, st->guiSt.totalTime);
+        sprintf(st->guiSt.statusMessage,"%s %0.0f Mb/s, %0.0fs elapsed", st->optSt.encrypt ? "Encrypting..." : "Decrypting...", dataRate, st->guiSt.totalTime);
         st->guiSt.averageRate += dataRate;
         #endif
         loopIterations++;
@@ -151,12 +149,10 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     }
     uint64_t remainingBytes = fileSize;
 
-    /*Initiate EVP_MD_Digest*/
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
 
-    /*HMAC the cipher-text, passtag and salt*/
-    uint64_t i; /*Declare i outside of for loop so it can be used in HMAC_Final as the size*/
+    uint64_t i;
     for (i = 0; remainingBytes; i += st->cryptSt.genHmacBufSize) {
         
         #ifdef gui
@@ -209,12 +205,10 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     }
     uint64_t remainingBytes = fileSize;
 
-    /*Initiate HMAC*/
     HMAC_CTX *ctx = HMAC_CTX_new();
     HMAC_Init_ex(ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
 
-    /*HMAC the cipher-text, passtag and salt*/
-    uint64_t i; /*Declare i outside of for loop so it can be used in HMAC_Final as the size*/
+    uint64_t i;
     for (i = 0; remainingBytes; i += st->cryptSt.genHmacBufSize) {
         
         #ifdef gui
@@ -405,7 +399,7 @@ void genEvpSalt(struct dataStruct *st)
     *(st->guiSt.progressFraction) = 0;
     #endif
 
-    unsigned char b; /*Random byte*/
+    unsigned char b;
 
     for (int i = 0; i < EVP_SALT_SIZE; i++) {
         if (!RAND_bytes(&b, 1)) {

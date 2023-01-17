@@ -267,9 +267,7 @@ int main(int argc, char *argv[])
     signal(SIGCONT,signalHandler);
     
     static struct dataStruct st = {0};
-    
-    //struct dataStruct *st = g_new0(struct dataStruct, 1);
-    
+        
     st.cryptSt.nFactor = DEFAULT_SCRYPT_N;
     st.cryptSt.pFactor = DEFAULT_SCRYPT_P;
     st.cryptSt.rFactor = DEFAULT_SCRYPT_R;
@@ -290,8 +288,8 @@ int main(int argc, char *argv[])
     
     #if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
-	OSSL_PROVIDER_load(NULL, "default");
-	#endif
+    OSSL_PROVIDER_load(NULL, "default");
+    #endif
 
     OpenSSL_add_all_algorithms();
     
