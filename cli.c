@@ -77,6 +77,11 @@ int main(int argc, char *argv[])
     }
     
     struct dataStruct st = {0};
+        
+    #if OPENSSL_VERSION_MAJOR >=3
+    OSSL_PROVIDER_load(NULL, "legacy");
+	OSSL_PROVIDER_load(NULL, "default");
+	#endif
     
     OpenSSL_add_all_algorithms();
     
