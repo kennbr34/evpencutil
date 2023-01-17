@@ -67,31 +67,26 @@ int workThread(char action, struct dataStruct *st)
                 printSysError(st->miscSt.returnVal);
                 exit(EXIT_FAILURE);
             }
+            
+            genKeyFileHash(keyFile,getFileSize(st->fileNameSt.keyFileName),st);
             fclose(keyFile);
+            
+            HKDFKeyFile(st);
         } else {
+            #ifdef gui
+            strcpy(st->guiSt.statusMessage,"Hashing keyfile...");
+            *(st->guiSt.overallProgressFraction) = .2;
+            #endif
             
-            st->cryptSt.keyFileBuffer = calloc(EVP_MAX_KEY_LENGTH, sizeof(*st->cryptSt.keyFileBuffer));
-            if (st->cryptSt.keyFileBuffer == NULL) {
-                printSysError(errno);
-                printError("Could not allocate keyFile buffer");
-                exit(EXIT_FAILURE);
-            }
-            
-            if(freadWErrCheck(st->cryptSt.keyFileBuffer,1,sizeof(*st->cryptSt.keyFileBuffer) * EVP_MAX_KEY_LENGTH,keyFile, st) != 0) {
-                printSysError(st->miscSt.returnVal);
-                exit(EXIT_FAILURE);
-            }
+            genKeyFileHash(keyFile,getFileSize(st->fileNameSt.keyFileName),st);
             fclose(keyFile);
 
             #ifdef gui
             strcpy(st->guiSt.statusMessage,"Generating encryption key...");
-            *(st->guiSt.overallProgressFraction) = .2;
+            *(st->guiSt.overallProgressFraction) = .3;
             #endif
             genEvpKey(st);
             HKDFKeyFile(st);
-            
-            OPENSSL_cleanse(st->cryptSt.keyFileBuffer, sizeof(*st->cryptSt.keyFileBuffer) * EVP_MAX_KEY_LENGTH);
-            free(st->cryptSt.keyFileBuffer);
         }
         
     } else {

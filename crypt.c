@@ -137,6 +137,64 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
     free(outBuffer);
 }
 
+void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
+{
+    #ifdef gui
+    *(st->guiSt.progressFraction) = 0.0;
+    #endif
+        
+    uint8_t *keyFileHashBuffer = malloc(st->cryptSt.genHmacBufSize * sizeof(*keyFileHashBuffer));
+    if (keyFileHashBuffer == NULL) {
+        printSysError(errno);
+        printError("Could not allocate memory for keyFileHashBuffer");
+        exit(EXIT_FAILURE);
+    }
+    uint64_t remainingBytes = fileSize;
+
+    /*Initiate EVP_MD_Digest*/
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+
+    /*HMAC the cipher-text, passtag and salt*/
+    uint64_t i; /*Declare i outside of for loop so it can be used in HMAC_Final as the size*/
+    for (i = 0; remainingBytes; i += st->cryptSt.genHmacBufSize) {
+        
+        #ifdef gui
+        st->guiSt.startLoop = clock();
+        st->guiSt.startBytes = (fileSize - remainingBytes);
+        #endif
+        
+        if(st->cryptSt.genHmacBufSize > remainingBytes) {
+            st->cryptSt.genHmacBufSize = remainingBytes;
+        }
+        
+        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genHmacBufSize, 1, dataFile, st) != 0) {
+            printSysError(st->miscSt.returnVal);
+            printError("Could not generate keyFile Hash");
+            exit(EXIT_FAILURE);
+        }
+        EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genHmacBufSize);
+        
+        remainingBytes -= st->cryptSt.genHmacBufSize;
+        #ifdef gui
+        *(st->guiSt.progressFraction) = (double)i/(double)fileSize;
+        
+        st->guiSt.endLoop = clock();
+        st->guiSt.endBytes = (fileSize - remainingBytes);
+        
+        st->guiSt.loopTime = (double)(st->guiSt.endLoop - st->guiSt.startLoop) / CLOCKS_PER_SEC;
+        st->guiSt.totalTime = (double)(st->guiSt.endLoop - st->guiSt.startTime) / CLOCKS_PER_SEC;
+        st->guiSt.totalBytes = st->guiSt.endBytes - st->guiSt.startBytes;
+        
+        double dataRate = (double)((double)st->guiSt.totalBytes/(double)st->guiSt.loopTime) / (1024*1024);
+        sprintf(st->guiSt.statusMessage,"%s %0.0f Mb/s, %0.0fs elapsed", "Hashing keyfile...", dataRate, st->guiSt.totalTime);
+        #endif
+    }
+    EVP_DigestFinal_ex(ctx, st->cryptSt.keyFileHash, NULL);
+    EVP_MD_CTX_free(ctx);
+    free(keyFileHashBuffer);
+}
+
 void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 {
     #ifdef gui
@@ -320,12 +378,12 @@ void HKDFKeyFile(struct dataStruct *st)
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
-    if (EVP_PKEY_CTX_set1_hkdf_key(pctx, st->cryptSt.evpKey, sizeof(*st->cryptSt.evpKey) * EVP_MAX_KEY_LENGTH) <= 0) {
+    if (EVP_PKEY_CTX_set1_hkdf_key(pctx, st->cryptSt.evpKey, sizeof(st->cryptSt.evpKey)) <= 0) {
         printError("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
-    if (EVP_PKEY_CTX_add1_hkdf_info(pctx, st->cryptSt.keyFileBuffer, EVP_MAX_KEY_LENGTH) <= 0) {
+    if (EVP_PKEY_CTX_add1_hkdf_info(pctx, st->cryptSt.keyFileHash, sizeof(st->cryptSt.keyFileHash)) <= 0) {
         printError("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);

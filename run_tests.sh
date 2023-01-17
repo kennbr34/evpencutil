@@ -12,6 +12,6 @@ dd if=/dev/urandom of=./keyfile bs=1M count=1
 #Test a 1 gigabyte file with a 1 megabyte keyfile
 
 dd if=/dev/urandom of=./testfile bs=1M count=1024
-dd if=/dev/urandom of=./keyfile bs=1M count=1
+dd if=/dev/urandom of=./keyfile bs=1M count=1024
 
 ./test.sh ./testfile ./keyfile

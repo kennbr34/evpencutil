@@ -16,6 +16,8 @@ struct cryptoStruct {
     uint8_t *hmacKey;
     uint32_t *HMACLengthPtr;
     
+    uint8_t keyFileHash[EVP_MAX_MD_SIZE];
+    
     size_t genHmacBufSize;
     size_t msgBufSize;
     

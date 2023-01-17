@@ -9,6 +9,7 @@ void genPassTag(struct dataStruct *st);
 void genEvpSalt(struct dataStruct *st);
 void genEvpKey(struct dataStruct *st);
 void HKDFKeyFile(struct dataStruct *st);
+void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st);
 uint64_t getFileSize(const char *filename);
 uint8_t printSyntax(char *arg);
 void signalHandler(int signum);

@@ -32,6 +32,8 @@ void cleanUpBuffers(struct dataStruct *st)
     
     OPENSSL_cleanse(st->cryptSt.userPass, strlen(st->cryptSt.userPass));
     OPENSSL_cleanse(st->cryptSt.userPassToVerify, strlen(st->cryptSt.userPassToVerify));
+    
+    OPENSSL_cleanse(st->cryptSt.keyFileHash, sizeof(st->cryptSt.keyFileHash));
 
     free(st->cryptSt.evpSalt);
 }
