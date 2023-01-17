@@ -29,10 +29,10 @@ void cleanUpBuffers(struct dataStruct *st)
     free(st->cryptSt.evpKey);
     OPENSSL_cleanse(st->cryptSt.hmacKey, HMAC_KEY_SIZE);
     free(st->cryptSt.hmacKey);
-    
+
     OPENSSL_cleanse(st->cryptSt.userPass, strlen(st->cryptSt.userPass));
     OPENSSL_cleanse(st->cryptSt.userPassToVerify, strlen(st->cryptSt.userPassToVerify));
-    
+
     OPENSSL_cleanse(st->cryptSt.keyFileHash, sizeof(st->cryptSt.keyFileHash));
 
     free(st->cryptSt.evpSalt);

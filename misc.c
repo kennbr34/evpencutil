@@ -37,52 +37,54 @@ uint64_t getFileSize(const char *filename)
     return st.st_size;
 }
 
-size_t getBufSizeMultiple(char *value) { 
-    
-    #define MAX_DIGITS 13
+size_t getBufSizeMultiple(char *value)
+{
+
+#define MAX_DIGITS 13
     char valString[MAX_DIGITS] = {0};
-    /* Compiling without optimization results in extremely slow speeds, but this will be optimized 
+    /* Compiling without optimization results in extremely slow speeds, but this will be optimized
      * out if not set to volatile.
      */
     volatile int valueLength = 0;
     volatile int multiple = 1;
-    
+
     /* value from getsubopt is not null-terminated so must copy and get the length manually without
      * string functions
      */
-    for(valueLength = 0;valueLength < MAX_DIGITS;valueLength++) {
-        if(isdigit(value[valueLength])) {
+    for (valueLength = 0; valueLength < MAX_DIGITS; valueLength++) {
+        if (isdigit(value[valueLength])) {
             valString[valueLength] = value[valueLength];
             continue;
-        }
-        else if(isalpha(value[valueLength])) {
+        } else if (isalpha(value[valueLength])) {
             valString[valueLength] = value[valueLength];
             valueLength++;
             break;
         }
     }
-    
-    if(valString[valueLength-1] == 'b' || valString[valueLength-1] == 'B')
+
+    if (valString[valueLength - 1] == 'b' || valString[valueLength - 1] == 'B')
         multiple = 1;
-    if(valString[valueLength-1] == 'k' || valString[valueLength-1] == 'K')
+    if (valString[valueLength - 1] == 'k' || valString[valueLength - 1] == 'K')
         multiple = 1024;
-    if(valString[valueLength-1] == 'm' || valString[valueLength-1] == 'M')
-        multiple = 1024*1024;
-    if(valString[valueLength-1] == 'g' || valString[valueLength-1] == 'G')
-        multiple = 1024*1024*1024;
-        
+    if (valString[valueLength - 1] == 'm' || valString[valueLength - 1] == 'M')
+        multiple = 1024 * 1024;
+    if (valString[valueLength - 1] == 'g' || valString[valueLength - 1] == 'G')
+        multiple = 1024 * 1024 * 1024;
+
     return multiple;
 }
 
-void makeMultipleOf(size_t *numberToChange, size_t multiple) {
-	 if(*numberToChange > multiple && *numberToChange % multiple != 0) {
-                *numberToChange = *numberToChange - (*numberToChange % multiple);
-        } else if (*numberToChange > multiple && *numberToChange % multiple == 0) {
-                *numberToChange = *numberToChange;
-        }
+void makeMultipleOf(size_t *numberToChange, size_t multiple)
+{
+    if (*numberToChange > multiple && *numberToChange % multiple != 0) {
+        *numberToChange = *numberToChange - (*numberToChange % multiple);
+    } else if (*numberToChange > multiple && *numberToChange % multiple == 0) {
+        *numberToChange = *numberToChange;
+    }
 }
 
-void signalHandler(int signum) {
+void signalHandler(int signum)
+{
     exit(EXIT_SUCCESS);
 }
 
@@ -104,15 +106,15 @@ void bytesPrefixed(char *prefixedString, unsigned long long bytes)
 void encListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
-    
+
     /*Do not list authenticated or wrap modes since they will not work*/
-    if(!strstr(obj->name,"gcm") &&
-       !strstr(obj->name,"GCM") && 
-       !strstr(obj->name,"ccm") &&
-       !strstr(obj->name,"CCM") && 
-       !strstr(obj->name,"ocb") &&
-       !strstr(obj->name,"wrap")) {
-        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (st->guiSt.encAlgorithmComboBox), obj->name);
+    if (!strstr(obj->name, "gcm") &&
+        !strstr(obj->name, "GCM") &&
+        !strstr(obj->name, "ccm") &&
+        !strstr(obj->name, "CCM") &&
+        !strstr(obj->name, "ocb") &&
+        !strstr(obj->name, "wrap")) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), obj->name);
     }
 }
 
@@ -120,10 +122,10 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 void mdListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
-    
+
     /*Do not list shake128 since it will not work*/
-    if(!strstr(obj->name,"shake128")) {
-        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (st->guiSt.mdAlgorithmComboBox), obj->name);
+    if (!strstr(obj->name, "shake128")) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), obj->name);
     }
 }
 #endif

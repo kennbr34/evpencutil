@@ -75,16 +75,16 @@ int main(int argc, char *argv[])
         printSyntax(argv[0]);
         exit(EXIT_FAILURE);
     }
-    
+
     struct dataStruct st = {0};
-        
-    #if OPENSSL_VERSION_MAJOR >=3
+
+    #if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
     OSSL_PROVIDER_load(NULL, "default");
     #endif
-    
+
     OpenSSL_add_all_algorithms();
-    
+
     st.cryptSt.encAlgorithm = strdup(DEFAULT_ENC);
     st.cryptSt.evpCipher = EVP_get_cipherbyname(st.cryptSt.encAlgorithm);
     st.cryptSt.mdAlgorithm = strdup(DEFAULT_MD);
@@ -93,22 +93,22 @@ int main(int argc, char *argv[])
     st.cryptSt.nFactor = DEFAULT_SCRYPT_N;
     st.cryptSt.pFactor = DEFAULT_SCRYPT_P;
     st.cryptSt.rFactor = DEFAULT_SCRYPT_R;
-    
+
     st.cryptSt.genHmacBufSize = 1024 * 1024;
     st.cryptSt.msgBufSize = 1024 * 1024;
-        
+
     parseOptions(argc, argv, &st);
 
     allocateBuffers(&st);
-        
-    if(st.optSt.encrypt) {
-        workThread('e',&st);
-    } else if(st.optSt.decrypt) {
-        workThread('d',&st);
+
+    if (st.optSt.encrypt) {
+        workThread('e', &st);
+    } else if (st.optSt.decrypt) {
+        workThread('d', &st);
     }
-    
+
     wait(NULL);
-    
+
     cleanUpBuffers(&st);
 
     return EXIT_SUCCESS;

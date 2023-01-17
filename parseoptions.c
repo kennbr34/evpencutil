@@ -23,7 +23,8 @@ uint8_t printSyntax(char *arg)
 \n\t\t Size of input buffer to use for generating MAC, in bytes, kilobytes, or megabytes\
 \n\t message_buffer=num[b|k|m]\
 \n\t\t Size of encryption/decryption input/output buffers to use in bytes, kilobytes or megabytes\
-\n", arg);
+\n",
+           arg);
     printf("\nCopyright (c) 1998-2019 The OpenSSL Project.  All rights reserved.\
 This product includes software developed by the OpenSSL Project\
 for use in the OpenSSL Toolkit (http://www.openssl.org/)\
@@ -35,53 +36,52 @@ Hudson (tjh@cryptsoft.com).\n");
 }
 
 void parseOptions(
-int argc,
-char *argv[],
-struct dataStruct *st
-) {
+    int argc,
+    char *argv[],
+    struct dataStruct *st)
+{
     int c;
     int errflg = 0;
     char binName[MAX_FILE_NAME_SIZE];
-    snprintf(binName,MAX_FILE_NAME_SIZE,"%s",argv[0]);
+    snprintf(binName, MAX_FILE_NAME_SIZE, "%s", argv[0]);
 
     while (1) {
         int option_index = 0;
         static struct option long_options[] = {
-            {"help",           no_argument,       0,'h' },
-            {"encrypt",        no_argument,       0,'e' },
-            {"decrypt",        no_argument,       0,'d' },
-            {"input-file",     required_argument, 0,'i' },
-            {"output-file",    required_argument, 0,'o' },
-            {"key-file",       required_argument, 0,'k' },
-            {"password",       required_argument, 0,'p' },
-            {"work-factors",   required_argument, 0,'w' },
-            {"sizes",          required_argument, 0,'s' },
-            {0,                0,                 0, 0  }
-        };
-        
+            {"help", no_argument, 0, 'h'},
+            {"encrypt", no_argument, 0, 'e'},
+            {"decrypt", no_argument, 0, 'd'},
+            {"input-file", required_argument, 0, 'i'},
+            {"output-file", required_argument, 0, 'o'},
+            {"key-file", required_argument, 0, 'k'},
+            {"password", required_argument, 0, 'p'},
+            {"work-factors", required_argument, 0, 'w'},
+            {"sizes", required_argument, 0, 's'},
+            {0, 0, 0, 0}};
+
         char *subopts;
         char *value;
-        
+
         c = getopt_long(argc, argv, "hqedi:o:k:p:w:s:c:m:",
                         long_options, &option_index);
-       if (c == -1)
-           break;
+        if (c == -1)
+            break;
 
         switch (c) {
-        
+
         case 'h':
             printSyntax(binName);
             exit(EXIT_FAILURE);
-        break;
+            break;
         case 'q':
             st->optSt.quitWhenDone = true;
-        break;
+            break;
         case 'e':
             st->optSt.encrypt = true;
-        break;
+            break;
         case 'd':
             st->optSt.decrypt = true;
-        break;
+            break;
         case 'i':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -i requires an argument\n");
@@ -91,7 +91,7 @@ struct dataStruct *st
                 st->optSt.inputFileGiven = true;
                 st->fileNameSt.inputFileName = strdup(optarg);
             }
-        break;
+            break;
         case 'o':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -o requires an argument\n");
@@ -101,7 +101,7 @@ struct dataStruct *st
                 st->optSt.outputFileGiven = true;
                 st->fileNameSt.outputFileName = strdup(optarg);
             }
-        break;
+            break;
         case 'k':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -k requires an argument\n");
@@ -111,7 +111,7 @@ struct dataStruct *st
                 st->optSt.keyFileGiven = true;
                 st->fileNameSt.keyFileName = strdup(optarg);
             }
-        break;
+            break;
         case 'p':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -p requires an argument\n");
@@ -121,7 +121,7 @@ struct dataStruct *st
                 st->optSt.passWordGiven = true;
                 snprintf(st->cryptSt.userPass, MAX_PASS_SIZE, "%s", optarg);
             }
-        break;
+            break;
         case 'w':
             if (optarg[0] == '-') {
                 fprintf(stderr, "Option -%c requires an argument\n", c);
@@ -180,7 +180,7 @@ struct dataStruct *st
                     break;
                 }
             }
-        break;
+            break;
         case 's':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -s requires an argument\n");
@@ -193,11 +193,10 @@ struct dataStruct *st
                 };
 
                 char *const token[] = {
-                    [MAC_BUFFER]   = "mac_buffer",
-                    [MSG_BUFFER]   = "message_buffer",
-                    NULL
-                };
-                
+                    [MAC_BUFFER] = "mac_buffer",
+                    [MSG_BUFFER] = "message_buffer",
+                    NULL};
+
                 subopts = optarg;
                 while (*subopts != '\0' && !errflg) {
                     switch (getsubopt(&subopts, token, &value)) {
@@ -207,34 +206,35 @@ struct dataStruct *st
                             errflg = 1;
                             continue;
                         }
-                            
+
                         st->optSt.macBufSizeGiven = true;
                         st->cryptSt.genHmacBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
-                        makeMultipleOf(&st->cryptSt.genHmacBufSize,sizeof(uint64_t));
-                    break;
+                        makeMultipleOf(&st->cryptSt.genHmacBufSize, sizeof(uint64_t));
+                        break;
                     case MSG_BUFFER:
                         if (value == NULL) {
                             fprintf(stderr, "Missing value for "
-                            "suboption '%s'\n", token[MSG_BUFFER]);
+                                            "suboption '%s'\n",
+                                    token[MSG_BUFFER]);
                             errflg = 1;
                             continue;
                         }
-                        
+
                         st->optSt.msgBufSizeGiven = true;
-                        
-                        /*Divide the amount specified by the size of uint64_t since it will 
+
+                        /*Divide the amount specified by the size of uint64_t since it will
                          * be multipled later*/
                         st->cryptSt.msgBufSize = (atol(value) * getBufSizeMultiple(value));
-                        makeMultipleOf(&st->cryptSt.msgBufSize,sizeof(uint64_t));
-                    break;
+                        makeMultipleOf(&st->cryptSt.msgBufSize, sizeof(uint64_t));
+                        break;
                     default:
                         fprintf(stderr, "No match found for token: /%s/\n", value);
                         errflg = 1;
-                    break;
+                        break;
                     }
                 }
             }
-        break;
+            break;
         case 'c':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -c requires an argument\n");
@@ -242,20 +242,20 @@ struct dataStruct *st
                 break;
             } else {
                 st->cryptSt.encAlgorithm = strdup(optarg);
-                if(st->cryptSt.encAlgorithm == NULL) {
+                if (st->cryptSt.encAlgorithm == NULL) {
                     printSysError(errno);
                     exit(EXIT_FAILURE);
                 }
-                
+
                 st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
                 if (!st->cryptSt.evpCipher) {
                     fprintf(stderr, "Could not load cipher: %s\n", st->cryptSt.encAlgorithm);
                     exit(EXIT_FAILURE);
                 }
-                
+
                 st->optSt.encAlgorithmGiven = true;
             }
-        break;
+            break;
         case 'm':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
                 fprintf(stderr, "Option -m requires an argument\n");
@@ -263,48 +263,48 @@ struct dataStruct *st
                 break;
             } else {
                 st->cryptSt.mdAlgorithm = strdup(optarg);
-                if(st->cryptSt.mdAlgorithm == NULL) {
+                if (st->cryptSt.mdAlgorithm == NULL) {
                     printSysError(errno);
                     exit(EXIT_FAILURE);
                 }
-            
+
                 st->cryptSt.evpDigest = EVP_get_digestbyname(st->cryptSt.mdAlgorithm);
                 if (!st->cryptSt.evpDigest) {
                     fprintf(stderr, "Could not load digest: %s\n", st->cryptSt.mdAlgorithm);
                     exit(EXIT_FAILURE);
                 }
-                
+
                 st->optSt.mdAlgorithmGiven = true;
             }
-        break;
+            break;
         case ':':
             fprintf(stderr, "Option -%c requires an argument\n", optopt);
             errflg++;
-        break;
+            break;
         case '?':
             errflg++;
-        break;
+            break;
         }
     }
 
-    if(st->optSt.encrypt && st->optSt.decrypt) {
+    if (st->optSt.encrypt && st->optSt.decrypt) {
         fprintf(stderr, "-d and -e are mutually exlusive. Can only encrypt or decrypt, not both.\n");
         errflg++;
     }
-    if(!st->optSt.encrypt && !st->optSt.decrypt) {
+    if (!st->optSt.encrypt && !st->optSt.decrypt) {
         fprintf(stderr, "Must specify to either encrypt or decrypt (-e or -d)\n");
         errflg++;
     }
-    if(!st->optSt.inputFileGiven || !st->optSt.outputFileGiven) {
+    if (!st->optSt.inputFileGiven || !st->optSt.outputFileGiven) {
         fprintf(stderr, "Must specify an input and output file\n");
         errflg++;
     }
-    
-    if(!strcmp(st->fileNameSt.inputFileName,st->fileNameSt.outputFileName)) {
+
+    if (!strcmp(st->fileNameSt.inputFileName, st->fileNameSt.outputFileName)) {
         fprintf(stderr, "Input file and output file are the same\n");
         errflg++;
     }
-    
+
     if (errflg) {
         printSyntax(binName);
         exit(EXIT_FAILURE);
