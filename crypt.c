@@ -211,10 +211,10 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     uint64_t i;
     for (i = 0; remainingBytes; i += st->cryptSt.genHmacBufSize) {
 
-    #ifdef gui
+        #ifdef gui
         st->guiSt.startLoop = clock();
         st->guiSt.startBytes = (fileSize - remainingBytes);
-    #endif
+        #endif
 
         if (st->cryptSt.genHmacBufSize > remainingBytes) {
             st->cryptSt.genHmacBufSize = remainingBytes;
@@ -228,7 +228,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         HMAC_Update(ctx, genHmacBuffer, sizeof(*genHmacBuffer) * st->cryptSt.genHmacBufSize);
 
         remainingBytes -= st->cryptSt.genHmacBufSize;
-    #ifdef gui
+        #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
 
         st->guiSt.endLoop = clock();
@@ -240,7 +240,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 
         double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.loopTime) / (1024 * 1024);
         sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Authenticating data...", dataRate, st->guiSt.totalTime);
-    #endif
+        #endif
     }
     HMAC_Final(ctx, st->cryptSt.generatedMAC, (unsigned int *)&fileSize);
     HMAC_CTX_free(ctx);

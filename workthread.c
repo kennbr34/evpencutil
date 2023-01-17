@@ -24,16 +24,16 @@ int workThread(char action, struct dataStruct *st)
     #endif
 
     if (action == 'e') {
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Generating salt...");
         *(st->guiSt.overallProgressFraction) = .1;
-    #endif
+        #endif
         genEvpSalt(st);
     } else if (action == 'd') {
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Reading salt...");
         *(st->guiSt.overallProgressFraction) = .1;
-    #endif
+        #endif
         /*Read evpSalt from head of cipher-text*/
         if (freadWErrCheck(st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt), EVP_SALT_SIZE, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
@@ -43,10 +43,10 @@ int workThread(char action, struct dataStruct *st)
     }
 
     if (action == 'd') {
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Reading pass keyed-hash...");
         *(st->guiSt.overallProgressFraction) = .2;
-    #endif
+        #endif
         /*Get passKeyedHashFromFile*/
         if (freadWErrCheck(st->cryptSt.passKeyedHashFromFile, sizeof(*st->cryptSt.passKeyedHashFromFile), PASS_KEYED_HASH_SIZE, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
@@ -74,27 +74,27 @@ int workThread(char action, struct dataStruct *st)
 
             HKDFKeyFile(st);
         } else {
-    #ifdef gui
+            #ifdef gui
             strcpy(st->guiSt.statusMessage, "Hashing keyfile...");
             *(st->guiSt.overallProgressFraction) = .2;
-    #endif
+            #endif
 
             genKeyFileHash(keyFile, getFileSize(st->fileNameSt.keyFileName), st);
             fclose(keyFile);
 
-    #ifdef gui
+            #ifdef gui
             strcpy(st->guiSt.statusMessage, "Generating encryption key...");
             *(st->guiSt.overallProgressFraction) = .3;
-    #endif
+            #endif
             genEvpKey(st);
             HKDFKeyFile(st);
         }
 
     } else {
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Generating encryption key...");
         *(st->guiSt.overallProgressFraction) = .2;
-    #endif
+        #endif
         genEvpKey(st);
     }
 
@@ -111,15 +111,15 @@ int workThread(char action, struct dataStruct *st)
     genPassTag(st);
 
     if (action == 'd') {
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Verifying password...");
         *(st->guiSt.overallProgressFraction) = .6;
-    #endif
+        #endif
         if (CRYPTO_memcmp(st->cryptSt.passKeyedHash, st->cryptSt.passKeyedHashFromFile, sizeof(*st->cryptSt.passKeyedHashFromFile) * PASS_KEYED_HASH_SIZE) != 0) {
             printf("Wrong password\n");
-    #ifdef gui
+            #ifdef gui
             strcpy(st->guiSt.statusMessage, "Wrong password");
-    #endif
+            #endif
             exit(EXIT_FAILURE);
         }
     }
@@ -127,10 +127,10 @@ int workThread(char action, struct dataStruct *st)
     if (action == 'e') {
         fileSize = getFileSize(st->fileNameSt.inputFileName);
 
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Writing salt...");
         *(st->guiSt.overallProgressFraction) = .5;
-    #endif
+        #endif
         /*Prepend salt to head of file*/
         if (fwriteWErrCheck(st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt), EVP_SALT_SIZE, outFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
@@ -138,10 +138,10 @@ int workThread(char action, struct dataStruct *st)
             exit(EXIT_FAILURE);
         }
 
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Writing password keyed-hash...");
         *(st->guiSt.overallProgressFraction) = .6;
-    #endif
+        #endif
         /*Write passKeyedHash to head of file next to salt*/
         if (fwriteWErrCheck(st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash), PASS_KEYED_HASH_SIZE, outFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
@@ -149,10 +149,10 @@ int workThread(char action, struct dataStruct *st)
             exit(EXIT_FAILURE);
         }
 
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Encrypting...");
         *(st->guiSt.overallProgressFraction) = .7;
-    #endif
+        #endif
     } else if (action == 'd') {
         /*Get filesize, discounting the salt and passKeyedHash*/
         fileSize = getFileSize(st->fileNameSt.inputFileName) - (EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE);
@@ -169,19 +169,19 @@ int workThread(char action, struct dataStruct *st)
         /*Reset file position to beginning of file*/
         rewind(inFile);
 
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Authenticating data...");
         *(st->guiSt.overallProgressFraction) = .7;
-    #endif
+        #endif
 
         genHMAC(inFile, (fileSize + (EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE)) - MAC_SIZE, st);
 
         /*Verify MAC*/
         if (CRYPTO_memcmp(st->cryptSt.fileMAC, st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC) * MAC_SIZE) != 0) {
             printf("Message authentication failed\n");
-    #ifdef gui
+            #ifdef gui
             strcpy(st->guiSt.statusMessage, "Authentication failure");
-    #endif
+            #endif
             exit(EXIT_FAILURE);
         }
 
@@ -190,10 +190,10 @@ int workThread(char action, struct dataStruct *st)
         /*Reset file posiiton to beginning of cipher-text after the salt and pass tag*/
         fseek(inFile, EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE, SEEK_SET);
 
-    #ifdef gui
+        #ifdef gui
         strcpy(st->guiSt.statusMessage, "Decrypting...");
         *(st->guiSt.overallProgressFraction) = .8;
-    #endif
+        #endif
     }
 
     if (action == 'e') {
