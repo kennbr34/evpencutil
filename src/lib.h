@@ -1,3 +1,32 @@
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <openssl/crypto.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <ctype.h>
+#ifdef gui
+#include <gtk/gtk.h>
+#endif
+
+#define _FILE_OFFSET_BITS 64
+#define MAX_PASS_SIZE 512
+#define DEFAULT_ENC "aes-256-ctr"
+#define DEFAULT_MD "sha512"
+#define DEFAULT_SCRYPT_N 1048576
+#define DEFAULT_SCRYPT_R 8
+#define DEFAULT_SCRYPT_P 1
+#define PASS_KEYED_HASH_SIZE SHA512_DIGEST_LENGTH
+#define HMAC_KEY_SIZE SHA512_DIGEST_LENGTH
+#define MAC_SIZE SHA512_DIGEST_LENGTH
+#define EVP_SALT_SIZE SHA512_DIGEST_LENGTH
+#define MAX_FILE_NAME_SIZE PATH_MAX + NAME_MAX + 1
+
 struct cryptoStruct {
     uint8_t *evpKey;
     uint8_t *evpSalt;
@@ -123,3 +152,41 @@ struct dataStruct {
     struct guiStruct guiSt;
     #endif
 };
+
+#define printSysError(errCode) \
+    { \
+        fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, strerror(errCode)); \
+    }
+
+#define printFileError(fileName, errCode) \
+    { \
+        fprintf(stderr, "%s: %s (Line: %i)\n", fileName, strerror(errCode), __LINE__); \
+    }
+
+#define printError(errMsg) \
+    { \
+        fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
+    }
+
+void allocateBuffers(struct dataStruct *st);
+void cleanUpBuffers(struct dataStruct *st);
+void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);
+uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
+uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
+void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st);
+void genHMACKey(struct dataStruct *st);
+void genPassTag(struct dataStruct *st);
+void genEvpSalt(struct dataStruct *st);
+void genEvpKey(struct dataStruct *st);
+void HKDFKeyFile(struct dataStruct *st);
+void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st);
+uint64_t getFileSize(const char *filename);
+uint8_t printSyntax(char *arg);
+void signalHandler(int signum);
+void makeMultipleOf(size_t *numberToChange, size_t multiple);
+int workThread(char action, struct dataStruct *st);
+void parseOptions(int argc, char *argv[], struct dataStruct *st);
+void bytesPrefixed(char *prefixedString, unsigned long long bytes);
+size_t getBufSizeMultiple(char *value);
+void encListCallback(const OBJ_NAME *obj, void *arg);
+void mdListCallback(const OBJ_NAME *obj, void *arg);

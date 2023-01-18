@@ -1,2 +1,0 @@
-struct termios termiosOld, termiosNew;
-

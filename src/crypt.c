@@ -1,4 +1,15 @@
-#include "headers.h"
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#include <openssl/hmac.h>
+#include <openssl/kdf.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <errno.h>
+#include <time.h>
+#include "lib.h"
 
 void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st)
 {

@@ -3,12 +3,11 @@
 
 AC_PREREQ([2.69])
 AC_INIT([EVP-ENC-UTIL], [0.09], [kennbr34@gmail.com])
-AC_CONFIG_SRCDIR([.])
+AC_CONFIG_SRCDIR([src])
+AM_INIT_AUTOMAKE([subdir-objects foreign])
 AC_CONFIG_HEADERS([config.h])
 
-AM_INIT_AUTOMAKE
-
-: ${CFLAGS="-g -O4 -fcommon -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-overlength-strings -Wno-pointer-sign -Wformat-overflow=0 -fsanitize=undefined"}
+: ${CFLAGS="-g -O4 -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-overlength-strings -Wno-pointer-sign -Wformat-overflow=0 -fsanitize=undefined"}
 
 # Checks for programs.
 AC_PROG_CC

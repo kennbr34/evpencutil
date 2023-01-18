@@ -25,15 +25,13 @@ Probably Windows if cross-compiled with MinGW, but untested
 
 # Compilation
 
-*Note* -fcommon needed to avoid redefintion errors in gcc versions over 11
-
 Command-line iterface:
 
-gcc -fcommon ./cli.c buffers.c crypt.c misc.c parseoptions.c workthread.c -o ./evpencutil-cli -lcrypto
+gcc src/cli.c src/crypt.c src/lib.c src/workthread.c -o ./bin/evpencutil-cli -lcrypto
 
 Graphical interface:
 
-gcc -fcommon -Dgui \`pkg-config --cflags gtk+-3.0\` ./gui.c buffers.c crypt.c misc.c parseoptions.c workthread.c -o ./evpencutil-gui \`pkg-config --libs gtk+-3.0\` -lcrypto
+gcc -Dgui \`pkg-config --cflags gtk+-3.0\` src/gui.c src/crypt.c src/lib.c src/workthread.c -o ./bin/evpencutil-gui \`pkg-config --libs gtk+-3.0\` -lcrypto
 
 Or with autotools/automake
 

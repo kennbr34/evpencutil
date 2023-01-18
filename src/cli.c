@@ -1,4 +1,13 @@
-#include "headers.h"
+#include <openssl/crypto.h>
+#include <openssl/rand.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include "lib.h"
+
+struct termios termiosOld, termiosNew;
+
 
 char *getPass(const char *prompt, char *paddedPass)
 {

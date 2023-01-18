@@ -1,4 +1,43 @@
-#include "headers.h"
+#include <stdint.h>
+#include <openssl/evp.h>
+#include <openssl/crypto.h>
+#if OPENSSL_VERSION_MAJOR >= 3
+#include <openssl/provider.h>
+#endif
+#include <signal.h>
+#include <string.h>
+#include <gtk/gtk.h>
+#include <sys/mman.h>
+#include "lib.h"
+
+#ifdef gui
+/*Lists available encryption algorithms in OpenSSL's EVP library*/
+void encListCallback(const OBJ_NAME *obj, void *arg)
+{
+    struct dataStruct *st = (struct dataStruct *)arg;
+
+    /*Do not list authenticated or wrap modes since they will not work*/
+    if (!strstr(obj->name, "gcm") &&
+        !strstr(obj->name, "GCM") &&
+        !strstr(obj->name, "ccm") &&
+        !strstr(obj->name, "CCM") &&
+        !strstr(obj->name, "ocb") &&
+        !strstr(obj->name, "wrap")) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), obj->name);
+    }
+}
+
+/*Lists available encryption algorithms in OpenSSL's EVP library*/
+void mdListCallback(const OBJ_NAME *obj, void *arg)
+{
+    struct dataStruct *st = (struct dataStruct *)arg;
+
+    /*Do not list shake128 since it will not work*/
+    if (!strstr(obj->name, "shake128")) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), obj->name);
+    }
+}
+#endif
 
 static gboolean updateStatus(gpointer user_data)
 {
@@ -286,10 +325,10 @@ int main(int argc, char *argv[])
 
     allocateBuffers(&st);
 
-#if OPENSSL_VERSION_MAJOR >= 3
+    #if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
     OSSL_PROVIDER_load(NULL, "default");
-#endif
+    #endif
 
     OpenSSL_add_all_algorithms();
 

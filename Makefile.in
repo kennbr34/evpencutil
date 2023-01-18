@@ -86,7 +86,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = evpencutil-gui$(EXEEXT) evpencutil-cli$(EXEEXT)
+bin_PROGRAMS = $(top_builddir)/bin/evpencutil-gui$(EXEEXT) \
+	$(top_builddir)/bin/evpencutil-cli$(EXEEXT)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -102,20 +103,24 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_evpencutil_cli_OBJECTS = cli.$(OBJEXT) buffers.$(OBJEXT) \
-	crypt.$(OBJEXT) misc.$(OBJEXT) parseoptions.$(OBJEXT) \
-	workthread.$(OBJEXT)
-evpencutil_cli_OBJECTS = $(am_evpencutil_cli_OBJECTS)
-evpencutil_cli_LDADD = $(LDADD)
-am_evpencutil_gui_OBJECTS = evpencutil_gui-gui.$(OBJEXT) \
-	evpencutil_gui-buffers.$(OBJEXT) \
-	evpencutil_gui-crypt.$(OBJEXT) evpencutil_gui-misc.$(OBJEXT) \
-	evpencutil_gui-parseoptions.$(OBJEXT) \
-	evpencutil_gui-workthread.$(OBJEXT)
-evpencutil_gui_OBJECTS = $(am_evpencutil_gui_OBJECTS)
+am__dirstamp = $(am__leading_dot)dirstamp
+am___top_builddir__bin_evpencutil_cli_OBJECTS = src/cli.$(OBJEXT) \
+	src/crypt.$(OBJEXT) src/lib.$(OBJEXT) src/workthread.$(OBJEXT)
+__top_builddir__bin_evpencutil_cli_OBJECTS =  \
+	$(am___top_builddir__bin_evpencutil_cli_OBJECTS)
+__top_builddir__bin_evpencutil_cli_LDADD = $(LDADD)
+am___top_builddir__bin_evpencutil_gui_OBJECTS =  \
+	src/__top_builddir__bin_evpencutil_gui-gui.$(OBJEXT) \
+	src/__top_builddir__bin_evpencutil_gui-crypt.$(OBJEXT) \
+	src/__top_builddir__bin_evpencutil_gui-lib.$(OBJEXT) \
+	src/__top_builddir__bin_evpencutil_gui-workthread.$(OBJEXT)
+__top_builddir__bin_evpencutil_gui_OBJECTS =  \
+	$(am___top_builddir__bin_evpencutil_gui_OBJECTS)
 am__DEPENDENCIES_1 =
-evpencutil_gui_DEPENDENCIES = $(am__DEPENDENCIES_1)
-evpencutil_gui_LINK = $(CCLD) $(evpencutil_gui_CFLAGS) $(CFLAGS) \
+__top_builddir__bin_evpencutil_gui_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1)
+__top_builddir__bin_evpencutil_gui_LINK = $(CCLD) \
+	$(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -149,8 +154,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(evpencutil_cli_SOURCES) $(evpencutil_gui_SOURCES)
-DIST_SOURCES = $(evpencutil_cli_SOURCES) $(evpencutil_gui_SOURCES)
+SOURCES = $(__top_builddir__bin_evpencutil_cli_SOURCES) \
+	$(__top_builddir__bin_evpencutil_gui_SOURCES)
+DIST_SOURCES = $(__top_builddir__bin_evpencutil_cli_SOURCES) \
+	$(__top_builddir__bin_evpencutil_gui_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -291,10 +298,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-evpencutil_gui_SOURCES = gui.c buffers.c crypt.c misc.c parseoptions.c workthread.c
-evpencutil_cli_SOURCES = cli.c buffers.c crypt.c misc.c parseoptions.c workthread.c
-evpencutil_gui_CFLAGS = -Dgui $(GTK_CFLAGS)
-evpencutil_gui_LDADD = $(GTK_LIBS)
+__top_builddir__bin_evpencutil_gui_SOURCES = src/gui.c src/crypt.c src/lib.c src/workthread.c
+__top_builddir__bin_evpencutil_cli_SOURCES = src/cli.c src/crypt.c src/lib.c src/workthread.c
+__top_builddir__bin_evpencutil_gui_CFLAGS = -Dgui $(GTK_CFLAGS)
+__top_builddir__bin_evpencutil_gui_LDADD = $(GTK_LIBS)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -306,15 +313,15 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
-	      echo ' cd $(srcdir) && $(AUTOMAKE) --gnu'; \
-	      $(am__cd) $(srcdir) && $(AUTOMAKE) --gnu \
+	      echo ' cd $(srcdir) && $(AUTOMAKE) --foreign'; \
+	      $(am__cd) $(srcdir) && $(AUTOMAKE) --foreign \
 		&& exit 0; \
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu Makefile
+	  $(AUTOMAKE) --foreign Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -390,131 +397,124 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+src/$(am__dirstamp):
+	@$(MKDIR_P) src
+	@: > src/$(am__dirstamp)
+src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/$(DEPDIR)
+	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/cli.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/crypt.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/lib.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/workthread.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+$(top_builddir)/bin/$(am__dirstamp):
+	@$(MKDIR_P) $(top_builddir)/bin
+	@: > $(top_builddir)/bin/$(am__dirstamp)
 
-evpencutil-cli$(EXEEXT): $(evpencutil_cli_OBJECTS) $(evpencutil_cli_DEPENDENCIES) $(EXTRA_evpencutil_cli_DEPENDENCIES) 
-	@rm -f evpencutil-cli$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(evpencutil_cli_OBJECTS) $(evpencutil_cli_LDADD) $(LIBS)
+$(top_builddir)/bin/evpencutil-cli$(EXEEXT): $(__top_builddir__bin_evpencutil_cli_OBJECTS) $(__top_builddir__bin_evpencutil_cli_DEPENDENCIES) $(EXTRA___top_builddir__bin_evpencutil_cli_DEPENDENCIES) $(top_builddir)/bin/$(am__dirstamp)
+	@rm -f $(top_builddir)/bin/evpencutil-cli$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(__top_builddir__bin_evpencutil_cli_OBJECTS) $(__top_builddir__bin_evpencutil_cli_LDADD) $(LIBS)
+src/__top_builddir__bin_evpencutil_gui-gui.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/__top_builddir__bin_evpencutil_gui-crypt.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/__top_builddir__bin_evpencutil_gui-lib.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/__top_builddir__bin_evpencutil_gui-workthread.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 
-evpencutil-gui$(EXEEXT): $(evpencutil_gui_OBJECTS) $(evpencutil_gui_DEPENDENCIES) $(EXTRA_evpencutil_gui_DEPENDENCIES) 
-	@rm -f evpencutil-gui$(EXEEXT)
-	$(AM_V_CCLD)$(evpencutil_gui_LINK) $(evpencutil_gui_OBJECTS) $(evpencutil_gui_LDADD) $(LIBS)
+$(top_builddir)/bin/evpencutil-gui$(EXEEXT): $(__top_builddir__bin_evpencutil_gui_OBJECTS) $(__top_builddir__bin_evpencutil_gui_DEPENDENCIES) $(EXTRA___top_builddir__bin_evpencutil_gui_DEPENDENCIES) $(top_builddir)/bin/$(am__dirstamp)
+	@rm -f $(top_builddir)/bin/evpencutil-gui$(EXEEXT)
+	$(AM_V_CCLD)$(__top_builddir__bin_evpencutil_gui_LINK) $(__top_builddir__bin_evpencutil_gui_OBJECTS) $(__top_builddir__bin_evpencutil_gui_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f src/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/buffers.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cli.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crypt.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpencutil_gui-buffers.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpencutil_gui-crypt.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpencutil_gui-gui.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpencutil_gui-misc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpencutil_gui-parseoptions.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpencutil_gui-workthread.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/misc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parseoptions.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/workthread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/cli.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/crypt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/lib.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/workthread.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-evpencutil_gui-gui.o: gui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-gui.o -MD -MP -MF $(DEPDIR)/evpencutil_gui-gui.Tpo -c -o evpencutil_gui-gui.o `test -f 'gui.c' || echo '$(srcdir)/'`gui.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-gui.Tpo $(DEPDIR)/evpencutil_gui-gui.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui.c' object='evpencutil_gui-gui.o' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-gui.o: src/gui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-gui.o -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-gui.o `test -f 'src/gui.c' || echo '$(srcdir)/'`src/gui.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/gui.c' object='src/__top_builddir__bin_evpencutil_gui-gui.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-gui.o `test -f 'gui.c' || echo '$(srcdir)/'`gui.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-gui.o `test -f 'src/gui.c' || echo '$(srcdir)/'`src/gui.c
 
-evpencutil_gui-gui.obj: gui.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-gui.obj -MD -MP -MF $(DEPDIR)/evpencutil_gui-gui.Tpo -c -o evpencutil_gui-gui.obj `if test -f 'gui.c'; then $(CYGPATH_W) 'gui.c'; else $(CYGPATH_W) '$(srcdir)/gui.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-gui.Tpo $(DEPDIR)/evpencutil_gui-gui.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gui.c' object='evpencutil_gui-gui.obj' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-gui.obj: src/gui.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-gui.obj -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-gui.obj `if test -f 'src/gui.c'; then $(CYGPATH_W) 'src/gui.c'; else $(CYGPATH_W) '$(srcdir)/src/gui.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-gui.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/gui.c' object='src/__top_builddir__bin_evpencutil_gui-gui.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-gui.obj `if test -f 'gui.c'; then $(CYGPATH_W) 'gui.c'; else $(CYGPATH_W) '$(srcdir)/gui.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-gui.obj `if test -f 'src/gui.c'; then $(CYGPATH_W) 'src/gui.c'; else $(CYGPATH_W) '$(srcdir)/src/gui.c'; fi`
 
-evpencutil_gui-buffers.o: buffers.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-buffers.o -MD -MP -MF $(DEPDIR)/evpencutil_gui-buffers.Tpo -c -o evpencutil_gui-buffers.o `test -f 'buffers.c' || echo '$(srcdir)/'`buffers.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-buffers.Tpo $(DEPDIR)/evpencutil_gui-buffers.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='buffers.c' object='evpencutil_gui-buffers.o' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-crypt.o: src/crypt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-crypt.o -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-crypt.o `test -f 'src/crypt.c' || echo '$(srcdir)/'`src/crypt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/crypt.c' object='src/__top_builddir__bin_evpencutil_gui-crypt.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-buffers.o `test -f 'buffers.c' || echo '$(srcdir)/'`buffers.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-crypt.o `test -f 'src/crypt.c' || echo '$(srcdir)/'`src/crypt.c
 
-evpencutil_gui-buffers.obj: buffers.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-buffers.obj -MD -MP -MF $(DEPDIR)/evpencutil_gui-buffers.Tpo -c -o evpencutil_gui-buffers.obj `if test -f 'buffers.c'; then $(CYGPATH_W) 'buffers.c'; else $(CYGPATH_W) '$(srcdir)/buffers.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-buffers.Tpo $(DEPDIR)/evpencutil_gui-buffers.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='buffers.c' object='evpencutil_gui-buffers.obj' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-crypt.obj: src/crypt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-crypt.obj -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-crypt.obj `if test -f 'src/crypt.c'; then $(CYGPATH_W) 'src/crypt.c'; else $(CYGPATH_W) '$(srcdir)/src/crypt.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-crypt.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/crypt.c' object='src/__top_builddir__bin_evpencutil_gui-crypt.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-buffers.obj `if test -f 'buffers.c'; then $(CYGPATH_W) 'buffers.c'; else $(CYGPATH_W) '$(srcdir)/buffers.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-crypt.obj `if test -f 'src/crypt.c'; then $(CYGPATH_W) 'src/crypt.c'; else $(CYGPATH_W) '$(srcdir)/src/crypt.c'; fi`
 
-evpencutil_gui-crypt.o: crypt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-crypt.o -MD -MP -MF $(DEPDIR)/evpencutil_gui-crypt.Tpo -c -o evpencutil_gui-crypt.o `test -f 'crypt.c' || echo '$(srcdir)/'`crypt.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-crypt.Tpo $(DEPDIR)/evpencutil_gui-crypt.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypt.c' object='evpencutil_gui-crypt.o' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-lib.o: src/lib.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-lib.o -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-lib.o `test -f 'src/lib.c' || echo '$(srcdir)/'`src/lib.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/lib.c' object='src/__top_builddir__bin_evpencutil_gui-lib.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-crypt.o `test -f 'crypt.c' || echo '$(srcdir)/'`crypt.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-lib.o `test -f 'src/lib.c' || echo '$(srcdir)/'`src/lib.c
 
-evpencutil_gui-crypt.obj: crypt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-crypt.obj -MD -MP -MF $(DEPDIR)/evpencutil_gui-crypt.Tpo -c -o evpencutil_gui-crypt.obj `if test -f 'crypt.c'; then $(CYGPATH_W) 'crypt.c'; else $(CYGPATH_W) '$(srcdir)/crypt.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-crypt.Tpo $(DEPDIR)/evpencutil_gui-crypt.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypt.c' object='evpencutil_gui-crypt.obj' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-lib.obj: src/lib.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-lib.obj -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-lib.obj `if test -f 'src/lib.c'; then $(CYGPATH_W) 'src/lib.c'; else $(CYGPATH_W) '$(srcdir)/src/lib.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-lib.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/lib.c' object='src/__top_builddir__bin_evpencutil_gui-lib.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-crypt.obj `if test -f 'crypt.c'; then $(CYGPATH_W) 'crypt.c'; else $(CYGPATH_W) '$(srcdir)/crypt.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-lib.obj `if test -f 'src/lib.c'; then $(CYGPATH_W) 'src/lib.c'; else $(CYGPATH_W) '$(srcdir)/src/lib.c'; fi`
 
-evpencutil_gui-misc.o: misc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-misc.o -MD -MP -MF $(DEPDIR)/evpencutil_gui-misc.Tpo -c -o evpencutil_gui-misc.o `test -f 'misc.c' || echo '$(srcdir)/'`misc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-misc.Tpo $(DEPDIR)/evpencutil_gui-misc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='misc.c' object='evpencutil_gui-misc.o' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-workthread.o: src/workthread.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-workthread.o -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-workthread.o `test -f 'src/workthread.c' || echo '$(srcdir)/'`src/workthread.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/workthread.c' object='src/__top_builddir__bin_evpencutil_gui-workthread.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-misc.o `test -f 'misc.c' || echo '$(srcdir)/'`misc.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-workthread.o `test -f 'src/workthread.c' || echo '$(srcdir)/'`src/workthread.c
 
-evpencutil_gui-misc.obj: misc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-misc.obj -MD -MP -MF $(DEPDIR)/evpencutil_gui-misc.Tpo -c -o evpencutil_gui-misc.obj `if test -f 'misc.c'; then $(CYGPATH_W) 'misc.c'; else $(CYGPATH_W) '$(srcdir)/misc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-misc.Tpo $(DEPDIR)/evpencutil_gui-misc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='misc.c' object='evpencutil_gui-misc.obj' libtool=no @AMDEPBACKSLASH@
+src/__top_builddir__bin_evpencutil_gui-workthread.obj: src/workthread.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -MT src/__top_builddir__bin_evpencutil_gui-workthread.obj -MD -MP -MF src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Tpo -c -o src/__top_builddir__bin_evpencutil_gui-workthread.obj `if test -f 'src/workthread.c'; then $(CYGPATH_W) 'src/workthread.c'; else $(CYGPATH_W) '$(srcdir)/src/workthread.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Tpo src/$(DEPDIR)/__top_builddir__bin_evpencutil_gui-workthread.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/workthread.c' object='src/__top_builddir__bin_evpencutil_gui-workthread.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-misc.obj `if test -f 'misc.c'; then $(CYGPATH_W) 'misc.c'; else $(CYGPATH_W) '$(srcdir)/misc.c'; fi`
-
-evpencutil_gui-parseoptions.o: parseoptions.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-parseoptions.o -MD -MP -MF $(DEPDIR)/evpencutil_gui-parseoptions.Tpo -c -o evpencutil_gui-parseoptions.o `test -f 'parseoptions.c' || echo '$(srcdir)/'`parseoptions.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-parseoptions.Tpo $(DEPDIR)/evpencutil_gui-parseoptions.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='parseoptions.c' object='evpencutil_gui-parseoptions.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-parseoptions.o `test -f 'parseoptions.c' || echo '$(srcdir)/'`parseoptions.c
-
-evpencutil_gui-parseoptions.obj: parseoptions.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-parseoptions.obj -MD -MP -MF $(DEPDIR)/evpencutil_gui-parseoptions.Tpo -c -o evpencutil_gui-parseoptions.obj `if test -f 'parseoptions.c'; then $(CYGPATH_W) 'parseoptions.c'; else $(CYGPATH_W) '$(srcdir)/parseoptions.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-parseoptions.Tpo $(DEPDIR)/evpencutil_gui-parseoptions.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='parseoptions.c' object='evpencutil_gui-parseoptions.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-parseoptions.obj `if test -f 'parseoptions.c'; then $(CYGPATH_W) 'parseoptions.c'; else $(CYGPATH_W) '$(srcdir)/parseoptions.c'; fi`
-
-evpencutil_gui-workthread.o: workthread.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-workthread.o -MD -MP -MF $(DEPDIR)/evpencutil_gui-workthread.Tpo -c -o evpencutil_gui-workthread.o `test -f 'workthread.c' || echo '$(srcdir)/'`workthread.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-workthread.Tpo $(DEPDIR)/evpencutil_gui-workthread.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='workthread.c' object='evpencutil_gui-workthread.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-workthread.o `test -f 'workthread.c' || echo '$(srcdir)/'`workthread.c
-
-evpencutil_gui-workthread.obj: workthread.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -MT evpencutil_gui-workthread.obj -MD -MP -MF $(DEPDIR)/evpencutil_gui-workthread.Tpo -c -o evpencutil_gui-workthread.obj `if test -f 'workthread.c'; then $(CYGPATH_W) 'workthread.c'; else $(CYGPATH_W) '$(srcdir)/workthread.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/evpencutil_gui-workthread.Tpo $(DEPDIR)/evpencutil_gui-workthread.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='workthread.c' object='evpencutil_gui-workthread.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(evpencutil_gui_CFLAGS) $(CFLAGS) -c -o evpencutil_gui-workthread.obj `if test -f 'workthread.c'; then $(CYGPATH_W) 'workthread.c'; else $(CYGPATH_W) '$(srcdir)/workthread.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(__top_builddir__bin_evpencutil_gui_CFLAGS) $(CFLAGS) -c -o src/__top_builddir__bin_evpencutil_gui-workthread.obj `if test -f 'src/workthread.c'; then $(CYGPATH_W) 'src/workthread.c'; else $(CYGPATH_W) '$(srcdir)/src/workthread.c'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -771,6 +771,9 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f src/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/$(am__dirstamp)
+	-test -z "$(top_builddir)/bin/$(am__dirstamp)" || rm -f $(top_builddir)/bin/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -781,7 +784,7 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf ./$(DEPDIR)
+	-rm -rf src/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
@@ -829,7 +832,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf ./$(DEPDIR)
+	-rm -rf src/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

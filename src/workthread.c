@@ -1,4 +1,10 @@
-#include "headers.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <time.h>
+#include <errno.h>
+#include "lib.h"
 
 int workThread(char action, struct dataStruct *st)
 {

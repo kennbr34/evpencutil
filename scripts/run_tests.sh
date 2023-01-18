@@ -15,3 +15,7 @@ dd if=/dev/urandom of=./testfile bs=1M count=1024
 dd if=/dev/urandom of=./keyfile bs=1M count=1024
 
 ./test.sh ./testfile ./keyfile
+
+#Clean up
+
+rm ./testfile* ./keyfile

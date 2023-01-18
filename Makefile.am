@@ -1,6 +1,6 @@
-bin_PROGRAMS = evpencutil-gui evpencutil-cli
-evpencutil_gui_SOURCES = gui.c buffers.c crypt.c misc.c parseoptions.c workthread.c
-evpencutil_cli_SOURCES = cli.c buffers.c crypt.c misc.c parseoptions.c workthread.c
+bin_PROGRAMS = $(top_builddir)/bin/evpencutil-gui $(top_builddir)/bin/evpencutil-cli
+__top_builddir__bin_evpencutil_gui_SOURCES = src/gui.c src/crypt.c src/lib.c src/workthread.c
+__top_builddir__bin_evpencutil_cli_SOURCES = src/cli.c src/crypt.c src/lib.c src/workthread.c
 
-evpencutil_gui_CFLAGS = -Dgui $(GTK_CFLAGS)
-evpencutil_gui_LDADD = $(GTK_LIBS)
+__top_builddir__bin_evpencutil_gui_CFLAGS = -Dgui $(GTK_CFLAGS)
+__top_builddir__bin_evpencutil_gui_LDADD = $(GTK_LIBS)
