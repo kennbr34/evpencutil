@@ -163,10 +163,10 @@ uint8_t printSyntax(char *arg)
 \n\t p=num\
 \n\t\t p factor for scrypt to use. Default 1\
 \n-k,--key-file - keyfile to use\
-\n-s,--sizes - [mac_buffer=],[message_buffer=]\
-\n\t mac_buffer=num[b|k|m]\
+\n-b,--buffer-sizes - [auth_buffer=],[file_buffer=]\
+\n\t auth_buffer=num[b|k|m]\
 \n\t\t Size of input buffer to use for generating MAC, in bytes, kilobytes, or megabytes\
-\n\t message_buffer=num[b|k|m]\
+\n\t file_buffer=num[b|k|m]\
 \n\t\t Size of encryption/decryption input/output buffers to use in bytes, kilobytes or megabytes\
 \n",
            arg);
@@ -201,13 +201,13 @@ void parseOptions(
             {"key-file", required_argument, 0, 'k'},
             {"password", required_argument, 0, 'p'},
             {"work-factors", required_argument, 0, 'w'},
-            {"sizes", required_argument, 0, 's'},
+            {"buffer-sizes", required_argument, 0, 'b'},
             {0, 0, 0, 0}};
 
         char *subopts;
         char *value;
 
-        c = getopt_long(argc, argv, "hqedi:o:k:p:w:s:c:m:",
+        c = getopt_long(argc, argv, "hqedi:o:k:p:w:b:c:m:",
                         long_options, &option_index);
         if (c == -1)
             break;
@@ -333,44 +333,44 @@ void parseOptions(
                 break;
             } else {
                 enum {
-                    MAC_BUFFER = 0,
-                    MSG_BUFFER
+                    AUTH_BUFFER = 0,
+                    FILE_BUFFER
                 };
 
                 char *const token[] = {
-                    [MAC_BUFFER] = "mac_buffer",
-                    [MSG_BUFFER] = "message_buffer",
+                    [AUTH_BUFFER] = "auth_buffer",
+                    [FILE_BUFFER] = "file_buffer",
                     NULL};
 
                 subopts = optarg;
                 while (*subopts != '\0' && !errflg) {
                     switch (getsubopt(&subopts, token, &value)) {
-                    case MAC_BUFFER:
+                    case AUTH_BUFFER:
                         if (value == NULL) {
-                            fprintf(stderr, "Missing value for suboption '%s'\n", token[MAC_BUFFER]);
+                            fprintf(stderr, "Missing value for suboption '%s'\n", token[AUTH_BUFFER]);
                             errflg = 1;
                             continue;
                         }
 
-                        st->optSt.macBufSizeGiven = true;
-                        st->cryptSt.genHmacBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
-                        makeMultipleOf(&st->cryptSt.genHmacBufSize, sizeof(uint64_t));
+                        st->optSt.authBufSizeGiven = true;
+                        st->cryptSt.genAuthBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
+                        makeMultipleOf(&st->cryptSt.genAuthBufSize, sizeof(uint64_t));
                         break;
-                    case MSG_BUFFER:
+                    case FILE_BUFFER:
                         if (value == NULL) {
                             fprintf(stderr, "Missing value for "
                                             "suboption '%s'\n",
-                                    token[MSG_BUFFER]);
+                                    token[FILE_BUFFER]);
                             errflg = 1;
                             continue;
                         }
 
-                        st->optSt.msgBufSizeGiven = true;
+                        st->optSt.fileBufSizeGiven = true;
 
                         /*Divide the amount specified by the size of uint64_t since it will
                          * be multipled later*/
-                        st->cryptSt.msgBufSize = (atol(value) * getBufSizeMultiple(value));
-                        makeMultipleOf(&st->cryptSt.msgBufSize, sizeof(uint64_t));
+                        st->cryptSt.fileBufSize = (atol(value) * getBufSizeMultiple(value));
+                        makeMultipleOf(&st->cryptSt.fileBufSize, sizeof(uint64_t));
                         break;
                     default:
                         fprintf(stderr, "No match found for token: /%s/\n", value);

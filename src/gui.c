@@ -94,8 +94,8 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
     st->guiSt.passWord = gtk_entry_get_text(GTK_ENTRY(st->guiSt.passwordBox));
     st->guiSt.verificationPass = gtk_entry_get_text(GTK_ENTRY(st->guiSt.passwordVerificationBox));
     st->guiSt.keyFilePath = gtk_entry_get_text(GTK_ENTRY(st->guiSt.keyFileNameBox));
-    st->guiSt.macBufSizeComboBoxText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.macBufSizeComboBox));
-    st->guiSt.msgBufSizeComboBoxText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.msgBufSizeComboBox));
+    st->guiSt.authBufSizeComboBoxText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.authBufSizeComboBox));
+    st->guiSt.fileBufSizeComboBoxText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.fileBufSizeComboBox));
 
     st->cryptSt.encAlgorithm = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox));
     st->cryptSt.mdAlgorithm = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox));
@@ -137,11 +137,11 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
     st->cryptSt.rFactor = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(st->guiSt.rFactorTextBox));
     st->cryptSt.pFactor = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(st->guiSt.pFactorTextBox));
 
-    st->cryptSt.genHmacBufSize = atol(st->guiSt.macBufSizeComboBoxText) * sizeof(uint8_t) * getBufSizeMultiple((char *)st->guiSt.macBufSizeComboBoxText);
-    makeMultipleOf(&st->cryptSt.genHmacBufSize, sizeof(uint64_t));
+    st->cryptSt.genAuthBufSize = atol(st->guiSt.authBufSizeComboBoxText) * sizeof(uint8_t) * getBufSizeMultiple((char *)st->guiSt.authBufSizeComboBoxText);
+    makeMultipleOf(&st->cryptSt.genAuthBufSize, sizeof(uint64_t));
 
-    st->cryptSt.msgBufSize = atol(st->guiSt.msgBufSizeComboBoxText) * sizeof(uint8_t) * getBufSizeMultiple((char *)st->guiSt.msgBufSizeComboBoxText);
-    makeMultipleOf(&st->cryptSt.msgBufSize, sizeof(uint64_t));
+    st->cryptSt.fileBufSize = atol(st->guiSt.fileBufSizeComboBoxText) * sizeof(uint8_t) * getBufSizeMultiple((char *)st->guiSt.fileBufSizeComboBoxText);
+    makeMultipleOf(&st->cryptSt.fileBufSize, sizeof(uint64_t));
 
     if (strlen(st->guiSt.passWord)) {
         st->optSt.passWordGiven = true;
@@ -311,8 +311,8 @@ int main(int argc, char *argv[])
     st.cryptSt.pFactor = DEFAULT_SCRYPT_P;
     st.cryptSt.rFactor = DEFAULT_SCRYPT_R;
 
-    st.cryptSt.genHmacBufSize = 1024 * 1024;
-    st.cryptSt.msgBufSize = 1024 * 1024;
+    st.cryptSt.genAuthBufSize = 1024 * 1024;
+    st.cryptSt.fileBufSize = 1024 * 1024;
 
     /*These must be mapped as shared memory for the worker thread to manipulate their values in the main thread*/
     st.guiSt.statusMessage = mmap(NULL, 256, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -423,29 +423,29 @@ int main(int argc, char *argv[])
     gtk_widget_set_tooltip_text(st.guiSt.keyFileButton, "Select the key file you want to use here");
     g_signal_connect(st.guiSt.keyFileButton, "clicked", G_CALLBACK(keyFileSelect), (gpointer)&st);
 
-    GtkWidget *macBufSizeLabel = gtk_label_new("Authentication Buffer Size");
-    st.guiSt.macBufSizeComboBox = gtk_combo_box_text_new();
-    gtk_widget_set_tooltip_text(st.guiSt.macBufSizeComboBox, "This controls the size of the buffer used for authenticating data");
-    char macBufSizeComboBoxTextString[15] = {0};
+    GtkWidget *authBufSizeLabel = gtk_label_new("Authentication Buffer Size");
+    st.guiSt.authBufSizeComboBox = gtk_combo_box_text_new();
+    gtk_widget_set_tooltip_text(st.guiSt.authBufSizeComboBox, "This controls the size of the buffer used for authenticating data");
+    char authBufSizeComboBoxTextString[15] = {0};
     number = 1;
     for (int i = 0; i < 34; i++) {
-        bytesPrefixed(macBufSizeComboBoxTextString, number);
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st.guiSt.macBufSizeComboBox), macBufSizeComboBoxTextString);
+        bytesPrefixed(authBufSizeComboBoxTextString, number);
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st.guiSt.authBufSizeComboBox), authBufSizeComboBoxTextString);
         number = number << 1;
     }
-    gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.macBufSizeComboBox), 20);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.authBufSizeComboBox), 20);
 
-    GtkWidget *msgBufSizeLabel = gtk_label_new("File Buffer Size");
-    st.guiSt.msgBufSizeComboBox = gtk_combo_box_text_new();
-    gtk_widget_set_tooltip_text(st.guiSt.msgBufSizeComboBox, "This controls the size of the buffer used for encryption/decryption data");
-    char msgBufSizeComboBoxTextString[15] = {0};
+    GtkWidget *fileBufSizeLabel = gtk_label_new("File Buffer Size");
+    st.guiSt.fileBufSizeComboBox = gtk_combo_box_text_new();
+    gtk_widget_set_tooltip_text(st.guiSt.fileBufSizeComboBox, "This controls the size of the buffer used for encryption/decryption data");
+    char fileBufSizeComboBoxTextString[15] = {0};
     number = 1;
     for (int i = 0; i < 34; i++) {
-        bytesPrefixed(msgBufSizeComboBoxTextString, number);
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st.guiSt.msgBufSizeComboBox), msgBufSizeComboBoxTextString);
+        bytesPrefixed(fileBufSizeComboBoxTextString, number);
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st.guiSt.fileBufSizeComboBox), fileBufSizeComboBoxTextString);
         number = number << 1;
     }
-    gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.msgBufSizeComboBox), 20);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.fileBufSizeComboBox), 20);
 
     GtkWidget *encryptButton = gtk_button_new_with_label("Encrypt");
     g_signal_connect(encryptButton, "clicked", G_CALLBACK(choseEncrypt), (gpointer)&st);
@@ -503,18 +503,18 @@ int main(int argc, char *argv[])
         gtk_adjustment_set_value(GTK_ADJUSTMENT(pFactorSpinButtonAdj), (gdouble)st.cryptSt.pFactor);
     }
 
-    if (st.optSt.macBufSizeGiven) {
+    if (st.optSt.authBufSizeGiven) {
         char size_string[15];
-        bytesPrefixed(size_string, st.cryptSt.genHmacBufSize);
-        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st.guiSt.macBufSizeComboBox), 0, (const gchar *)size_string);
-        gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.macBufSizeComboBox), 0);
+        bytesPrefixed(size_string, st.cryptSt.genAuthBufSize);
+        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st.guiSt.authBufSizeComboBox), 0, (const gchar *)size_string);
+        gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.authBufSizeComboBox), 0);
     }
 
-    if (st.optSt.msgBufSizeGiven) {
+    if (st.optSt.fileBufSizeGiven) {
         char size_string[15];
-        bytesPrefixed(size_string, st.cryptSt.msgBufSize);
-        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st.guiSt.msgBufSizeComboBox), 0, (const gchar *)size_string);
-        gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.msgBufSizeComboBox), 0);
+        bytesPrefixed(size_string, st.cryptSt.fileBufSize);
+        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st.guiSt.fileBufSizeComboBox), 0, (const gchar *)size_string);
+        gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.fileBufSizeComboBox), 0);
     }
 
     if (st.optSt.encAlgorithmGiven) {
@@ -556,10 +556,10 @@ int main(int argc, char *argv[])
     gtk_grid_attach(GTK_GRID(grid), keyFileLabel, 0, 18, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), st.guiSt.keyFileNameBox, 0, 19, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), st.guiSt.keyFileButton, 1, 19, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), macBufSizeLabel, 0, 24, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), st.guiSt.macBufSizeComboBox, 0, 25, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), msgBufSizeLabel, 1, 24, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), st.guiSt.msgBufSizeComboBox, 1, 25, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), authBufSizeLabel, 0, 24, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), st.guiSt.authBufSizeComboBox, 0, 25, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), fileBufSizeLabel, 1, 24, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), st.guiSt.fileBufSizeComboBox, 1, 25, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), encAlgorithmLabel, 0, 26, 2, 1);
     gtk_grid_attach(GTK_GRID(grid), st.guiSt.encAlgorithmComboBox, 0, 27, 2, 1);
     gtk_grid_attach(GTK_GRID(grid), mdAlgorithmLabel, 0, 28, 2, 1);

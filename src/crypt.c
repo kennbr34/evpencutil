@@ -17,7 +17,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
     *(st->guiSt.progressFraction) = 0.0;
     #endif
 
-    uint8_t *inBuffer = calloc(st->cryptSt.msgBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.msgBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
+    uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
     if (inBuffer == NULL || outBuffer == NULL) {
         printSysError(errno);
         printError("Could not allocate memory for doCrypt buffers");
@@ -45,25 +45,25 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
     uint64_t i;
     uint64_t loopIterations = 0;
-    for (i = 0; remainingBytes; i += st->cryptSt.msgBufSize) {
+    for (i = 0; remainingBytes; i += st->cryptSt.fileBufSize) {
 
         #ifdef gui
         st->guiSt.startLoop = clock();
         st->guiSt.startBytes = (fileSize - remainingBytes);
         #endif
 
-        if (st->cryptSt.msgBufSize > remainingBytes) {
-            st->cryptSt.msgBufSize = remainingBytes;
+        if (st->cryptSt.fileBufSize > remainingBytes) {
+            st->cryptSt.fileBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(inBuffer, sizeof(*inBuffer) * st->cryptSt.msgBufSize, 1, inFile, st) != 0) {
+        if (freadWErrCheck(inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize, 1, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not read file for encryption/decryption");
             exit(EXIT_FAILURE);
         }
 
         if (st->optSt.encrypt) {
-            if (!EVP_EncryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.msgBufSize)) {
+            if (!EVP_EncryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
                 fprintf(stderr, "EVP_EncryptUpdate failed\n");
                 ERR_print_errors_fp(stderr);
                 EVP_CIPHER_CTX_cleanup(evp_ctx);
@@ -71,7 +71,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
                 exit(EXIT_FAILURE);
             }
         } else if (st->optSt.decrypt) {
-            if (!EVP_DecryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.msgBufSize)) {
+            if (!EVP_DecryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
                 fprintf(stderr, "EVP_DecryptUpdate failed\n");
                 ERR_print_errors_fp(stderr);
                 EVP_CIPHER_CTX_cleanup(evp_ctx);
@@ -89,7 +89,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
         HMAC_Update(hmac_ctx, outBuffer, (sizeof(*outBuffer) * evpOutputLength));
 
-        remainingBytes -= st->cryptSt.msgBufSize;
+        remainingBytes -= st->cryptSt.fileBufSize;
 
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
@@ -152,7 +152,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     *(st->guiSt.progressFraction) = 0.0;
     #endif
 
-    uint8_t *keyFileHashBuffer = malloc(st->cryptSt.genHmacBufSize * sizeof(*keyFileHashBuffer));
+    uint8_t *keyFileHashBuffer = malloc(st->cryptSt.genAuthBufSize * sizeof(*keyFileHashBuffer));
     if (keyFileHashBuffer == NULL) {
         printSysError(errno);
         printError("Could not allocate memory for keyFileHashBuffer");
@@ -164,25 +164,25 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     EVP_DigestInit_ex(ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
 
     uint64_t i;
-    for (i = 0; remainingBytes; i += st->cryptSt.genHmacBufSize) {
+    for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
 
         #ifdef gui
         st->guiSt.startLoop = clock();
         st->guiSt.startBytes = (fileSize - remainingBytes);
         #endif
 
-        if (st->cryptSt.genHmacBufSize > remainingBytes) {
-            st->cryptSt.genHmacBufSize = remainingBytes;
+        if (st->cryptSt.genAuthBufSize > remainingBytes) {
+            st->cryptSt.genAuthBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genHmacBufSize, 1, dataFile, st) != 0) {
+        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize, 1, dataFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not generate keyFile Hash");
             exit(EXIT_FAILURE);
         }
-        EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genHmacBufSize);
+        EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
 
-        remainingBytes -= st->cryptSt.genHmacBufSize;
+        remainingBytes -= st->cryptSt.genAuthBufSize;
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
 
@@ -208,10 +208,10 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     *(st->guiSt.progressFraction) = 0.0;
     #endif
 
-    uint8_t *genHmacBuffer = malloc(st->cryptSt.genHmacBufSize * sizeof(*genHmacBuffer));
-    if (genHmacBuffer == NULL) {
+    uint8_t *genAuthBuffer = malloc(st->cryptSt.genAuthBufSize * sizeof(*genAuthBuffer));
+    if (genAuthBuffer == NULL) {
         printSysError(errno);
-        printError("Could not allocate memory for genHmacBuffer");
+        printError("Could not allocate memory for genAuthBuffer");
         exit(EXIT_FAILURE);
     }
     uint64_t remainingBytes = fileSize;
@@ -220,25 +220,25 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     HMAC_Init_ex(ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
 
     uint64_t i;
-    for (i = 0; remainingBytes; i += st->cryptSt.genHmacBufSize) {
+    for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
 
         #ifdef gui
         st->guiSt.startLoop = clock();
         st->guiSt.startBytes = (fileSize - remainingBytes);
         #endif
 
-        if (st->cryptSt.genHmacBufSize > remainingBytes) {
-            st->cryptSt.genHmacBufSize = remainingBytes;
+        if (st->cryptSt.genAuthBufSize > remainingBytes) {
+            st->cryptSt.genAuthBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(genHmacBuffer, sizeof(*genHmacBuffer) * st->cryptSt.genHmacBufSize, 1, dataFile, st) != 0) {
+        if (freadWErrCheck(genAuthBuffer, sizeof(*genAuthBuffer) * st->cryptSt.genAuthBufSize, 1, dataFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not generate HMAC");
             exit(EXIT_FAILURE);
         }
-        HMAC_Update(ctx, genHmacBuffer, sizeof(*genHmacBuffer) * st->cryptSt.genHmacBufSize);
+        HMAC_Update(ctx, genAuthBuffer, sizeof(*genAuthBuffer) * st->cryptSt.genAuthBufSize);
 
-        remainingBytes -= st->cryptSt.genHmacBufSize;
+        remainingBytes -= st->cryptSt.genAuthBufSize;
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
 
@@ -255,7 +255,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     }
     HMAC_Final(ctx, st->cryptSt.generatedMAC, (unsigned int *)&fileSize);
     HMAC_CTX_free(ctx);
-    free(genHmacBuffer);
+    free(genAuthBuffer);
 }
 
 void genHMACKey(struct dataStruct *st)

@@ -47,8 +47,8 @@ struct cryptoStruct {
     
     uint8_t keyFileHash[EVP_MAX_MD_SIZE];
     
-    size_t genHmacBufSize;
-    size_t msgBufSize;
+    size_t genAuthBufSize;
+    size_t fileBufSize;
     
     const EVP_CIPHER *evpCipher;
     const EVP_MD *evpDigest;
@@ -73,8 +73,8 @@ struct optionsStruct {
     bool keyFileGiven;
     bool passWordGiven;
     bool keyBufSizeGiven;
-    bool macBufSizeGiven;
-    bool msgBufSizeGiven;
+    bool authBufSizeGiven;
+    bool fileBufSizeGiven;
     bool gotPassFromCmdLine;
     bool nFactorGiven;
     bool rFactorGiven;
@@ -107,8 +107,8 @@ struct guiStruct {
     GtkWidget *keyFileButton;
     
     GtkWidget *keySizeComboBox;
-    GtkWidget *macBufSizeComboBox;
-    GtkWidget *msgBufSizeComboBox;
+    GtkWidget *authBufSizeComboBox;
+    GtkWidget *fileBufSizeComboBox;
     GtkWidget *encAlgorithmComboBox;
     GtkWidget *mdAlgorithmComboBox;
     
@@ -118,8 +118,8 @@ struct guiStruct {
     const char *passWord;
     const char *verificationPass;
     const char *keySizeComboBoxText;
-    const char *macBufSizeComboBoxText;
-    const char *msgBufSizeComboBoxText;
+    const char *authBufSizeComboBoxText;
+    const char *fileBufSizeComboBoxText;
 
     double *progressFraction;
     char *statusMessage;
