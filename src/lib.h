@@ -25,6 +25,8 @@
 #define HMAC_KEY_SIZE SHA512_DIGEST_LENGTH
 #define MAC_SIZE SHA512_DIGEST_LENGTH
 #define EVP_SALT_SIZE SHA512_DIGEST_LENGTH
+#define EVPENCUTIL_STRING_SIZE 11
+#define ALGORITHM_STRING_SIZE SHA512_DIGEST_LENGTH
 #define MAX_FILE_NAME_SIZE PATH_MAX + NAME_MAX + 1
 
 struct cryptoStruct {
@@ -53,8 +55,8 @@ struct cryptoStruct {
     const EVP_CIPHER *evpCipher;
     const EVP_MD *evpDigest;
     
-    const char *encAlgorithm;
-    const char *mdAlgorithm;
+    char *encAlgorithm;
+    char *mdAlgorithm;
 };
 
 struct fileNames {
@@ -104,6 +106,10 @@ struct guiStruct {
     GtkWidget *rFactorTextBox;
     GtkWidget *pFactorTextBox;
     
+    GtkAdjustment *nFactorSpinButtonAdj;
+    GtkAdjustment *rFactorSpinButtonAdj;
+    GtkAdjustment *pFactorSpinButtonAdj;
+    
     GtkWidget *keyFileButton;
     
     GtkWidget *keySizeComboBox;
@@ -143,6 +149,13 @@ struct guiStruct {
 };
 #endif
 
+struct headerStruct {
+    const char evpEncUtilString[EVPENCUTIL_STRING_SIZE];
+    char algorithmString[ALGORITHM_STRING_SIZE];
+    uint8_t evpSalt[EVP_SALT_SIZE];
+    uint32_t scryptWorkFactors[3];
+};
+
 struct dataStruct {
     struct cryptoStruct cryptSt;
     struct fileNames fileNameSt;
@@ -151,6 +164,7 @@ struct dataStruct {
     #ifdef gui
     struct guiStruct guiSt;
     #endif
+    struct headerStruct cryptoHeader;
 };
 
 #define printSysError(errCode) \
@@ -190,3 +204,4 @@ void bytesPrefixed(char *prefixedString, unsigned long long bytes);
 size_t getBufSizeMultiple(char *value);
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);
+void parseCryptoHeader(struct dataStruct *st);

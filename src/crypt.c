@@ -30,7 +30,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
     HMAC_CTX *hmac_ctx = HMAC_CTX_new();
     HMAC_Init_ex(hmac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
 
-    HMAC_Update(hmac_ctx, st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE);
+    HMAC_Update(hmac_ctx, (const unsigned char *)&st->cryptoHeader, sizeof(st->cryptoHeader));
     HMAC_Update(hmac_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
 
     if (st->optSt.encrypt) {
@@ -137,7 +137,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         exit(EXIT_FAILURE);
     }
 
-    bytesWritten += EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE;
+    bytesWritten += sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE;
 
     HMAC_Final(hmac_ctx, st->cryptSt.generatedMAC, (unsigned int *)&bytesWritten);
     HMAC_CTX_free(hmac_ctx);

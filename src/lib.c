@@ -145,6 +145,84 @@ void cleanUpBuffers(struct dataStruct *st)
     free(st->cryptSt.evpSalt);
 }
 
+/*parseCryptoHeader should be done before forking into the workThread so that the GtkComboBoxes
+ * can be updated with the correct information*/
+void parseCryptoHeader(struct dataStruct *st) {
+    FILE *inFile = fopen(st->fileNameSt.inputFileName, "rb");
+    if (inFile == NULL) {
+        printFileError(st->fileNameSt.inputFileName, errno);
+        exit(EXIT_FAILURE);
+    }
+    
+    /*Read cryptoHeader from head of cipher-text or fail if malformed*/
+    if (freadWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, inFile, st) != 0) {
+        printSysError(st->miscSt.returnVal);
+        printError("Could not read salt");
+        exit(EXIT_FAILURE);
+    }
+    
+    if(strcmp(st->cryptoHeader.evpEncUtilString,"evpencutil") != 0) {
+        printError("Not a file produced with evpencutil, exiting");
+        exit(EXIT_FAILURE);
+    }
+    
+    /*Populate cryptSt members from cryptoHeader*/
+    memcpy(st->cryptSt.evpSalt, st->cryptoHeader.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE);
+    
+    /*Parse algorithmString*/
+    
+    char *token_save_ptr;
+    char *token = strtok_r(st->cryptoHeader.algorithmString, ":",&token_save_ptr);
+    if (token == NULL) {
+        printf("Could not parse header.\nIs %s a evpencutil file?\n", st->fileNameSt.inputFileName);
+        exit(EXIT_FAILURE);
+    }
+    st->cryptSt.evpCipher = EVP_get_cipherbyname(token);
+    if (!st->cryptSt.evpCipher) {
+        fprintf(stderr, "Could not load cipher: %s\n", token);
+        exit(EXIT_FAILURE);
+    }
+    if(st->cryptSt.encAlgorithm != NULL) {
+        free(st->cryptSt.encAlgorithm);
+    }
+    st->cryptSt.encAlgorithm = strdup(token);
+    #ifdef gui
+    gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), 0, st->cryptSt.encAlgorithm);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(st->guiSt.encAlgorithmComboBox), 0);
+    #endif
+
+    token = strtok_r(NULL, ":", &token_save_ptr);
+    if (token == NULL) {
+        printf("Could not parse header.\nIs %s a evpencutil file?\n", st->fileNameSt.inputFileName);
+        exit(EXIT_FAILURE);
+    }
+    st->cryptSt.evpDigest = EVP_get_digestbyname(token);
+    if (!st->cryptSt.evpDigest) {
+        fprintf(stderr, "Could not load digest: %s\n", token);
+        exit(EXIT_FAILURE);
+    }
+    if(st->cryptSt.mdAlgorithm != NULL) {
+        free(st->cryptSt.mdAlgorithm);
+    }
+    st->cryptSt.mdAlgorithm = strdup(token);
+    #ifdef gui
+    gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), 0, st->cryptSt.mdAlgorithm);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(st->guiSt.mdAlgorithmComboBox), 0);
+    #endif
+    
+    st->cryptSt.nFactor = st->cryptoHeader.scryptWorkFactors[0];
+    st->cryptSt.rFactor = st->cryptoHeader.scryptWorkFactors[1];
+    st->cryptSt.pFactor = st->cryptoHeader.scryptWorkFactors[2];
+    
+    #ifdef gui
+    gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.nFactorSpinButtonAdj), (gdouble)st->cryptSt.nFactor);
+    gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.rFactorSpinButtonAdj), (gdouble)st->cryptSt.rFactor);
+    gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.pFactorSpinButtonAdj), (gdouble)st->cryptSt.pFactor);
+    #endif 
+    
+    fclose(inFile);
+}
+
 uint8_t printSyntax(char *arg)
 {
     printf("\

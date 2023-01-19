@@ -202,6 +202,7 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
             workThread('e', st);
         } else if (strcmp(st->guiSt.encryptOrDecrypt, "decrypt") == 0) {
             strcpy(st->guiSt.statusMessage, "Starting decryption...");
+            parseCryptoHeader(st);
             workThread('d', st);
         }
     }
@@ -366,29 +367,54 @@ int main(int argc, char *argv[])
 
     GtkWidget *encAlgorithmLabel = gtk_label_new("Encryption Algorithm");
     st.guiSt.encAlgorithmComboBox = gtk_combo_box_text_new();
-    gtk_widget_set_tooltip_text(st.guiSt.encAlgorithmComboBox, "Choose encryption algorithm to use");
     OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, &st);
+    
+    char encAlgorithmToolTipText[] = "\
+    Choose which encryption algorithm to use\n\
+    Best options: aes-256-ctr or chacha20\n\
+    AES will generally be faster since most architectures have AES instruction sets built into the\
+    CPU\
+    \n\
+    If you're unsure what to use, it is best to stick to defaults. Many of these options are sipmly\
+    added automatically by listing what is available in the OpenSSL library, and may not be\
+    appropriate for all use cases. As well, some are fairly out-of-date and not reccomended\
+    such as RC4 or blowfish, and some may not actually be configured to work correctly with this program\
+    such as chacha20-poly1305\
+    \n";
+    gtk_widget_set_tooltip_text(st.guiSt.encAlgorithmComboBox, encAlgorithmToolTipText);
 
     GtkWidget *mdAlgorithmLabel = gtk_label_new("Message Digest Algorithm");
     st.guiSt.mdAlgorithmComboBox = gtk_combo_box_text_new();
-    gtk_widget_set_tooltip_text(st.guiSt.mdAlgorithmComboBox, "Choose digest algorithm to use");
     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, &st);
+    
+    char mdAlgorithmToolTipText[] = "\
+    Choose which message digest algorithm to use. This is what will be used by HMAC as the hash\
+    for your authentication code, as well as what HKDF will use as a hash for key derivation\n\
+    Best options: sha512, sha3-512 or blake2b512\n\
+    Whichever is fastest, which you can benchmark with 'openssl speed -evp *algoname*\
+    \n\
+    If you're unsure what to use, it is best to stick to defaults. Many of these options are sipmly\
+    added automatically by listing what is available in the OpenSSL library, and may not be\
+    appropriate for all use cases. As well, some are fairly out-of-date and not reccomended\
+    such as md5 or sha1, and some may not actually be configured to work correctly with this program\
+    \n";
+    gtk_widget_set_tooltip_text(st.guiSt.mdAlgorithmComboBox, mdAlgorithmToolTipText);
 
     GtkWidget *scryptWorkFactorsLabel = gtk_label_new("scrypt work factors:");
 
     GtkWidget *nFactorLabel = gtk_label_new("N Factor");
-    GtkAdjustment *nFactorSpinButtonAdj = gtk_adjustment_new(DEFAULT_SCRYPT_N, 0, DEFAULT_SCRYPT_N * 8, 1048576, 0, 0);
-    st.guiSt.nFactorTextBox = gtk_spin_button_new(GTK_ADJUSTMENT(nFactorSpinButtonAdj), 0, 0);
+    st.guiSt.nFactorSpinButtonAdj = gtk_adjustment_new(DEFAULT_SCRYPT_N, 0, DEFAULT_SCRYPT_N * 8, 1048576, 0, 0);
+    st.guiSt.nFactorTextBox = gtk_spin_button_new(GTK_ADJUSTMENT(st.guiSt.nFactorSpinButtonAdj), 0, 0);
     gtk_widget_set_tooltip_text(st.guiSt.nFactorTextBox, "This is the N factor that will be used by scrypt");
 
     GtkWidget *rFactorLabel = gtk_label_new("r Factor");
-    GtkAdjustment *rFactorSpinButtonAdj = gtk_adjustment_new(DEFAULT_SCRYPT_R, 0, 10, 1, 0, 0);
-    st.guiSt.rFactorTextBox = gtk_spin_button_new(GTK_ADJUSTMENT(rFactorSpinButtonAdj), 0, 0);
+    st.guiSt.rFactorSpinButtonAdj = gtk_adjustment_new(DEFAULT_SCRYPT_R, 0, 10, 1, 0, 0);
+    st.guiSt.rFactorTextBox = gtk_spin_button_new(GTK_ADJUSTMENT(st.guiSt.rFactorSpinButtonAdj), 0, 0);
     gtk_widget_set_tooltip_text(st.guiSt.rFactorTextBox, "This is the r factor that will be used by scrypt");
 
     GtkWidget *pFactorLabel = gtk_label_new("p Factor");
-    GtkAdjustment *pFactorSpinButtonAdj = gtk_adjustment_new(DEFAULT_SCRYPT_P, 0, 10, 1, 0, 0);
-    st.guiSt.pFactorTextBox = gtk_spin_button_new(GTK_ADJUSTMENT(pFactorSpinButtonAdj), 0, 0);
+    st.guiSt.pFactorSpinButtonAdj = gtk_adjustment_new(DEFAULT_SCRYPT_P, 0, 10, 1, 0, 0);
+    st.guiSt.pFactorTextBox = gtk_spin_button_new(GTK_ADJUSTMENT(st.guiSt.pFactorSpinButtonAdj), 0, 0);
     gtk_widget_set_tooltip_text(st.guiSt.pFactorTextBox, "This is the p factor that will be used by scrypt");
 
     char scryptToolTipText[] = "\
@@ -402,9 +428,7 @@ int main(int argc, char *argv[])
     \nThe N factor is typically the only value which the user should modify and the default\
     is the current reccomendation, but one should Google for more guidance on this. Or, \
     as a rule of thumb, tune this to a factor which takes as long for your CPU to generate\
-    a key as is satisfactory to you and/or that your computer has memory resources for.\
-    \n\n ***Very Important***\n\
-    You must remember these settings to generate the proper key for decryption";
+    a key as is satisfactory to you and/or that your computer has memory resources for.";
 
     gtk_widget_set_tooltip_text(scryptWorkFactorsLabel, (const gchar *)scryptToolTipText);
     gtk_widget_set_tooltip_text(nFactorLabel, (const gchar *)scryptToolTipText);
@@ -492,15 +516,15 @@ int main(int argc, char *argv[])
     }
 
     if (st.optSt.nFactorGiven) {
-        gtk_adjustment_set_value(GTK_ADJUSTMENT(nFactorSpinButtonAdj), (gdouble)st.cryptSt.nFactor);
+        gtk_adjustment_set_value(GTK_ADJUSTMENT(st.guiSt.nFactorSpinButtonAdj), (gdouble)st.cryptSt.nFactor);
     }
 
     if (st.optSt.rFactorGiven) {
-        gtk_adjustment_set_value(GTK_ADJUSTMENT(rFactorSpinButtonAdj), (gdouble)st.cryptSt.rFactor);
+        gtk_adjustment_set_value(GTK_ADJUSTMENT(st.guiSt.rFactorSpinButtonAdj), (gdouble)st.cryptSt.rFactor);
     }
 
     if (st.optSt.pFactorGiven) {
-        gtk_adjustment_set_value(GTK_ADJUSTMENT(pFactorSpinButtonAdj), (gdouble)st.cryptSt.pFactor);
+        gtk_adjustment_set_value(GTK_ADJUSTMENT(st.guiSt.pFactorSpinButtonAdj), (gdouble)st.cryptSt.pFactor);
     }
 
     if (st.optSt.authBufSizeGiven) {

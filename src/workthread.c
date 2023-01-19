@@ -35,17 +35,6 @@ int workThread(char action, struct dataStruct *st)
         *(st->guiSt.overallProgressFraction) = .1;
         #endif
         genEvpSalt(st);
-    } else if (action == 'd') {
-        #ifdef gui
-        strcpy(st->guiSt.statusMessage, "Reading salt...");
-        *(st->guiSt.overallProgressFraction) = .1;
-        #endif
-        /*Read evpSalt from head of cipher-text*/
-        if (freadWErrCheck(st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt), EVP_SALT_SIZE, inFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not read salt");
-            exit(EXIT_FAILURE);
-        }
     }
 
     if (action == 'd') {
@@ -53,6 +42,10 @@ int workThread(char action, struct dataStruct *st)
         strcpy(st->guiSt.statusMessage, "Reading pass keyed-hash...");
         *(st->guiSt.overallProgressFraction) = .2;
         #endif
+        
+        /*Skip past cryptoHeader since it was parsed prior to now*/
+        fseek(inFile,sizeof(st->cryptoHeader),SEEK_SET);
+        
         /*Get passKeyedHashFromFile*/
         if (freadWErrCheck(st->cryptSt.passKeyedHashFromFile, sizeof(*st->cryptSt.passKeyedHashFromFile), PASS_KEYED_HASH_SIZE, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
@@ -137,8 +130,17 @@ int workThread(char action, struct dataStruct *st)
         strcpy(st->guiSt.statusMessage, "Writing salt...");
         *(st->guiSt.overallProgressFraction) = .5;
         #endif
-        /*Prepend salt to head of file*/
-        if (fwriteWErrCheck(st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt), EVP_SALT_SIZE, outFile, st) != 0) {
+        
+        /*Prepare cryptoHeader*/
+        strcpy((char * restrict)st->cryptoHeader.evpEncUtilString, "evpencutil");
+        memcpy(st->cryptoHeader.evpSalt, st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE);
+        snprintf(st->cryptoHeader.algorithmString,ALGORITHM_STRING_SIZE,"%s:%s", st->cryptSt.encAlgorithm, st->cryptSt.mdAlgorithm);
+        st->cryptoHeader.scryptWorkFactors[0] = st->cryptSt.nFactor;
+        st->cryptoHeader.scryptWorkFactors[1] = st->cryptSt.rFactor;
+        st->cryptoHeader.scryptWorkFactors[2] = st->cryptSt.pFactor;
+        
+        /*Prepend cryptoHeader to head of file*/
+        if (fwriteWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, outFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not write salt");
             exit(EXIT_FAILURE);
@@ -148,7 +150,7 @@ int workThread(char action, struct dataStruct *st)
         strcpy(st->guiSt.statusMessage, "Writing password keyed-hash...");
         *(st->guiSt.overallProgressFraction) = .6;
         #endif
-        /*Write passKeyedHash to head of file next to salt*/
+        /*Write passKeyedHash to head of file next to cryptoHeader*/
         if (fwriteWErrCheck(st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash), PASS_KEYED_HASH_SIZE, outFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not write password hash");
@@ -160,11 +162,11 @@ int workThread(char action, struct dataStruct *st)
         *(st->guiSt.overallProgressFraction) = .7;
         #endif
     } else if (action == 'd') {
-        /*Get filesize, discounting the salt and passKeyedHash*/
-        fileSize = getFileSize(st->fileNameSt.inputFileName) - (EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE);
+        /*Get filesize, discounting the cryptoHeader and passKeyedHash*/
+        fileSize = getFileSize(st->fileNameSt.inputFileName) - (sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE);
 
         /*Move file position to the start of the MAC*/
-        fseek(inFile, (fileSize + EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE) - MAC_SIZE, SEEK_SET);
+        fseek(inFile, (fileSize + sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE) - MAC_SIZE, SEEK_SET);
 
         if (freadWErrCheck(st->cryptSt.fileMAC, sizeof(*st->cryptSt.fileMAC), MAC_SIZE, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
@@ -180,7 +182,7 @@ int workThread(char action, struct dataStruct *st)
         *(st->guiSt.overallProgressFraction) = .7;
         #endif
 
-        genHMAC(inFile, (fileSize + (EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE)) - MAC_SIZE, st);
+        genHMAC(inFile, (fileSize + (sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE)) - MAC_SIZE, st);
 
         /*Verify MAC*/
         if (CRYPTO_memcmp(st->cryptSt.fileMAC, st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC) * MAC_SIZE) != 0) {
@@ -194,7 +196,7 @@ int workThread(char action, struct dataStruct *st)
         OPENSSL_cleanse(st->cryptSt.hmacKey, sizeof(*st->cryptSt.hmacKey) * HMAC_KEY_SIZE);
 
         /*Reset file posiiton to beginning of cipher-text after the salt and pass tag*/
-        fseek(inFile, EVP_SALT_SIZE + PASS_KEYED_HASH_SIZE, SEEK_SET);
+        fseek(inFile, sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE, SEEK_SET);
 
         #ifdef gui
         strcpy(st->guiSt.statusMessage, "Decrypting...");

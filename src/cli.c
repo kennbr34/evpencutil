@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
     if (st.optSt.encrypt) {
         workThread('e', &st);
     } else if (st.optSt.decrypt) {
+        parseCryptoHeader(&st);
         workThread('d', &st);
     }
 

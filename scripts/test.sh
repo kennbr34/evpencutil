@@ -4,10 +4,10 @@ TESTFILE=$1
 KEYFILE=$2
 
 
-ENC_CLI="../bin/evpencutil-cli -e -i $TESTFILE -o ${TESTFILE}.enc"
+ENC_CLI="../bin/evpencutil-cli -e -i $TESTFILE -o ${TESTFILE}.enc -c aes-256-cbc"
 DEC_CLI="../bin/evpencutil-cli -d -i ${TESTFILE}.enc -o ${TESTFILE}.plain"
 
-ENC_GUI="../bin/evpencutil-gui -q -e -i $TESTFILE -o ${TESTFILE}.enc"
+ENC_GUI="../bin/evpencutil-gui -q -e -i $TESTFILE -o ${TESTFILE}.enc -c chacha20"
 DEC_GUI="../bin/evpencutil-gui -q -d -i ${TESTFILE}.enc -o ${TESTFILE}.plain"
 
 CMP_RES="cmp ${TESTFILE} ${TESTFILE}.plain"
