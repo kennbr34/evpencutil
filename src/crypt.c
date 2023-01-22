@@ -152,7 +152,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     *(st->guiSt.progressFraction) = 0.0;
     #endif
 
-    uint8_t *keyFileHashBuffer = malloc(st->cryptSt.genAuthBufSize * sizeof(*keyFileHashBuffer));
+    uint8_t *keyFileHashBuffer = calloc(st->cryptSt.genAuthBufSize, sizeof(*keyFileHashBuffer));
     if (keyFileHashBuffer == NULL) {
         printSysError(errno);
         printError("Could not allocate memory for keyFileHashBuffer");
@@ -208,7 +208,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     *(st->guiSt.progressFraction) = 0.0;
     #endif
 
-    uint8_t *genAuthBuffer = malloc(st->cryptSt.genAuthBufSize * sizeof(*genAuthBuffer));
+    uint8_t *genAuthBuffer = calloc(st->cryptSt.genAuthBufSize, sizeof(*genAuthBuffer));
     if (genAuthBuffer == NULL) {
         printSysError(errno);
         printError("Could not allocate memory for genAuthBuffer");
