@@ -8,11 +8,17 @@
 
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
-    if (fread(ptr, size, nmemb, stream) != nmemb / size) {
-        if (feof(stream)) {
-            st->miscSt.returnVal = EBADMSG;
-            return EBADMSG;
-        } else if (ferror(stream)) {
+    int expectedRetVal = 0;
+    if(size == 1) {
+        expectedRetVal = size;
+    } else {
+        expectedRetVal = nmemb;
+    }
+    
+    int retVal = fread(ptr, size, nmemb, stream);
+    
+    if ( retVal != expectedRetVal ){
+        if (ferror(stream) || ( retVal == 0 && !feof(stream) )) {
             st->miscSt.returnVal = errno;
             return errno;
         }
@@ -23,11 +29,17 @@ uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, stru
 
 uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
-    if (fwrite(ptr, size, nmemb, stream) != nmemb / size) {
-        if (feof(stream)) {
-            st->miscSt.returnVal = EBADMSG;
-            return EBADMSG;
-        } else if (ferror(stream)) {
+    int expectedRetVal = 0;
+    if(size == 1) {
+        expectedRetVal = size;
+    } else {
+        expectedRetVal = nmemb;
+    }
+    
+    int retVal = fwrite(ptr, size, nmemb, stream);
+    
+    if ( retVal != expectedRetVal ){
+       if (ferror(stream)) {
             st->miscSt.returnVal = errno;
             return errno;
         }

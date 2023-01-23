@@ -56,7 +56,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
             st->cryptSt.fileBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize, 1, inFile, st) != 0) {
+        if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not read file for encryption/decryption");
             exit(EXIT_FAILURE);
@@ -175,7 +175,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
             st->cryptSt.genAuthBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize, 1, dataFile, st) != 0) {
+        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not generate keyFile Hash");
             exit(EXIT_FAILURE);
@@ -231,7 +231,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
             st->cryptSt.genAuthBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(genAuthBuffer, sizeof(*genAuthBuffer) * st->cryptSt.genAuthBufSize, 1, dataFile, st) != 0) {
+        if (freadWErrCheck(genAuthBuffer, sizeof(*genAuthBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not generate HMAC");
             exit(EXIT_FAILURE);

@@ -63,7 +63,7 @@ int workThread(char action, struct dataStruct *st)
         }
 
         if (!st->optSt.passWordGiven) {
-            if (freadWErrCheck(st->cryptSt.evpKey, 1, sizeof(*st->cryptSt.evpKey) * EVP_MAX_KEY_LENGTH, keyFile, st) != 0) {
+            if (freadWErrCheck(st->cryptSt.evpKey, sizeof(*st->cryptSt.evpKey), EVP_MAX_KEY_LENGTH, keyFile, st) != 0) {
                 printSysError(st->miscSt.returnVal);
                 exit(EXIT_FAILURE);
             }
