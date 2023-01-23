@@ -59,6 +59,8 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not read file for encryption/decryption");
+            OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
             exit(EXIT_FAILURE);
         }
 
@@ -67,6 +69,9 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
                 fprintf(stderr, "EVP_EncryptUpdate failed\n");
                 ERR_print_errors_fp(stderr);
                 EVP_CIPHER_CTX_cleanup(evp_ctx);
+                
+                OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+                OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
                 exit(EXIT_FAILURE);
             }
@@ -75,6 +80,9 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
                 fprintf(stderr, "EVP_DecryptUpdate failed\n");
                 ERR_print_errors_fp(stderr);
                 EVP_CIPHER_CTX_cleanup(evp_ctx);
+                
+                OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+                OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
                 exit(EXIT_FAILURE);
             }
@@ -83,6 +91,10 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not write file for encryption/decryption");
+            
+            OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            
             exit(EXIT_FAILURE);
         }
         bytesWritten += evpOutputLength;
@@ -116,6 +128,10 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
             fprintf(stderr, "EVP_EncryptFinal_ex failed\n");
             ERR_print_errors_fp(stderr);
             EVP_CIPHER_CTX_cleanup(evp_ctx);
+            
+            OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            
             exit(EXIT_FAILURE);
         }
         bytesWritten += evpOutputLength;
@@ -125,6 +141,10 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
             fprintf(stderr, "EVP_DecryptFinal_ex failed \n");
             ERR_print_errors_fp(stderr);
             EVP_CIPHER_CTX_cleanup(evp_ctx);
+            
+            OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+            
             exit(EXIT_FAILURE);
         }
     }
@@ -134,6 +154,10 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
     if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
         printSysError(st->miscSt.returnVal);
         printError("Could not write file for encryption/decryption");
+        
+        OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+        OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+        
         exit(EXIT_FAILURE);
     }
 
@@ -141,6 +165,9 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
     HMAC_Final(hmac_ctx, st->cryptSt.generatedMAC, (unsigned int *)&bytesWritten);
     HMAC_CTX_free(hmac_ctx);
+    
+    OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
+    OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
     free(inBuffer);
     free(outBuffer);
@@ -178,6 +205,9 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
             printSysError(st->miscSt.returnVal);
             printError("Could not generate keyFile Hash");
+            
+            OPENSSL_cleanse(keyFileHashBuffer,sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
+            
             exit(EXIT_FAILURE);
         }
         EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
@@ -199,6 +229,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     }
     EVP_DigestFinal_ex(ctx, st->cryptSt.keyFileHash, NULL);
     EVP_MD_CTX_free(ctx);
+    OPENSSL_cleanse(keyFileHashBuffer,sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
     free(keyFileHashBuffer);
 }
 
