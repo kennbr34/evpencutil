@@ -6,6 +6,8 @@
 #include <openssl/crypto.h>
 #include "lib.h"
 
+extern struct cryptoStruct *cryptStGlobal;
+
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
     int expectedRetVal = 0;
@@ -142,19 +144,17 @@ void allocateBuffers(struct dataStruct *st)
     }
 }
 
-void cleanUpBuffers(struct dataStruct *st)
+void cleanUpBuffers(void)
 {
-    OPENSSL_cleanse(st->cryptSt.evpKey, EVP_MAX_KEY_LENGTH);
-    free(st->cryptSt.evpKey);
-    OPENSSL_cleanse(st->cryptSt.hmacKey, HMAC_KEY_SIZE);
-    free(st->cryptSt.hmacKey);
+    OPENSSL_cleanse(cryptStGlobal->evpKey, EVP_MAX_KEY_LENGTH);
+    OPENSSL_cleanse(cryptStGlobal->hmacKey, HMAC_KEY_SIZE);
 
-    OPENSSL_cleanse(st->cryptSt.userPass, strlen(st->cryptSt.userPass));
-    OPENSSL_cleanse(st->cryptSt.userPassToVerify, strlen(st->cryptSt.userPassToVerify));
+    OPENSSL_cleanse(cryptStGlobal->userPass, strlen(cryptStGlobal->userPass));
+    OPENSSL_cleanse(cryptStGlobal->userPassToVerify, strlen(cryptStGlobal->userPassToVerify));
 
-    OPENSSL_cleanse(st->cryptSt.keyFileHash, sizeof(st->cryptSt.keyFileHash));
-
-    free(st->cryptSt.evpSalt);
+    OPENSSL_cleanse(cryptStGlobal->keyFileHash, sizeof(cryptStGlobal->keyFileHash));
+    
+    free(cryptStGlobal);
 }
 
 /*parseCryptoHeader should be done before forking into the workThread so that the GtkComboBoxes
@@ -539,7 +539,11 @@ void parseOptions(
         fprintf(stderr, "Input file and output file are the same\n");
         errflg++;
     }
-
+    
+    for (int i = 1; i < argc; i++) {
+        OPENSSL_cleanse(argv[i], strlen(argv[i]));
+    }
+            
     if (errflg) {
         printSyntax(binName);
         exit(EXIT_FAILURE);

@@ -183,7 +183,7 @@ struct dataStruct {
     }
 
 void allocateBuffers(struct dataStruct *st);
-void cleanUpBuffers(struct dataStruct *st);
+void cleanUpBuffers(void);
 void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
 uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);

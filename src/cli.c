@@ -7,7 +7,7 @@
 #include "lib.h"
 
 struct termios termiosOld, termiosNew;
-
+struct cryptoStruct *cryptStGlobal = NULL;
 
 char *getPass(const char *prompt, char *paddedPass)
 {
@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
     }
 
     struct dataStruct st = {0};
+    cryptStGlobal = &st.cryptSt;
 
     #if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
@@ -120,8 +121,6 @@ int main(int argc, char *argv[])
     int waitStatus = 0;
 
     wait(&waitStatus);
-
-    cleanUpBuffers(&st);
     
     if(WIFEXITED(waitStatus)) {
         return WEXITSTATUS(waitStatus);
