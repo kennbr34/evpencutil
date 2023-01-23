@@ -116,10 +116,16 @@ int main(int argc, char *argv[])
         parseCryptoHeader(&st);
         workThread('d', &st);
     }
+    
+    int waitStatus = 0;
 
-    wait(NULL);
+    wait(&waitStatus);
 
     cleanUpBuffers(&st);
-
-    return EXIT_SUCCESS;
+    
+    if(WIFEXITED(waitStatus)) {
+        return WEXITSTATUS(waitStatus);
+    } else {
+        return EXIT_FAILURE;
+    }
 }
