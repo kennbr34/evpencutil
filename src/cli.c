@@ -17,7 +17,7 @@ char *getPass(const char *prompt, char *paddedPass)
     char *pass = NULL;
     unsigned char *paddedPassTmp = calloc(sizeof(*paddedPassTmp), MAX_PASS_SIZE);
     if (paddedPassTmp == NULL) {
-        printSysError(errno);
+        PRINT_SYS_ERROR(errno);
         exit(EXIT_FAILURE);
     }
 

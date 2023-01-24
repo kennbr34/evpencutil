@@ -167,17 +167,17 @@ struct dataStruct {
     struct headerStruct cryptoHeader;
 };
 
-#define printSysError(errCode) \
+#define PRINT_SYS_ERROR(errCode) \
     { \
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, strerror(errCode)); \
     }
 
-#define printFileError(fileName, errCode) \
+#define PRINT_FILE_ERROR(fileName, errCode) \
     { \
         fprintf(stderr, "%s: %s (Line: %i)\n", fileName, strerror(errCode), __LINE__); \
     }
 
-#define printError(errMsg) \
+#define PRINT_ERROR(errMsg) \
     { \
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
     }

@@ -19,8 +19,8 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
     uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
     if (inBuffer == NULL || outBuffer == NULL) {
-        printSysError(errno);
-        printError("Could not allocate memory for doCrypt buffers");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not allocate memory for doCrypt buffers");
         exit(EXIT_FAILURE);
     }
 
@@ -57,8 +57,8 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         }
 
         if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not read file for encryption/decryption");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not read file for encryption/decryption");
             OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
             OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
             exit(EXIT_FAILURE);
@@ -89,8 +89,8 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         }
 
         if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not write file for encryption/decryption");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not write file for encryption/decryption");
             
             OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
             OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
@@ -152,8 +152,8 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
     EVP_CIPHER_CTX_free(evp_ctx);
 
     if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
-        printSysError(st->miscSt.returnVal);
-        printError("Could not write file for encryption/decryption");
+        PRINT_SYS_ERROR(st->miscSt.returnVal);
+        PRINT_ERROR("Could not write file for encryption/decryption");
         
         OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
         OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
@@ -181,8 +181,8 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 
     uint8_t *keyFileHashBuffer = calloc(st->cryptSt.genAuthBufSize, sizeof(*keyFileHashBuffer));
     if (keyFileHashBuffer == NULL) {
-        printSysError(errno);
-        printError("Could not allocate memory for keyFileHashBuffer");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not allocate memory for keyFileHashBuffer");
         exit(EXIT_FAILURE);
     }
     uint64_t remainingBytes = fileSize;
@@ -203,8 +203,8 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         }
 
         if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not generate keyFile Hash");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not generate keyFile Hash");
             
             OPENSSL_cleanse(keyFileHashBuffer,sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
             
@@ -241,8 +241,8 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 
     uint8_t *genAuthBuffer = calloc(st->cryptSt.genAuthBufSize, sizeof(*genAuthBuffer));
     if (genAuthBuffer == NULL) {
-        printSysError(errno);
-        printError("Could not allocate memory for genAuthBuffer");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not allocate memory for genAuthBuffer");
         exit(EXIT_FAILURE);
     }
     uint64_t remainingBytes = fileSize;
@@ -263,8 +263,8 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         }
 
         if (freadWErrCheck(genAuthBuffer, sizeof(*genAuthBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not generate HMAC");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not generate HMAC");
             exit(EXIT_FAILURE);
         }
         HMAC_Update(ctx, genAuthBuffer, sizeof(*genAuthBuffer) * st->cryptSt.genAuthBufSize);
@@ -301,27 +301,27 @@ void genHMACKey(struct dataStruct *st)
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
 
     if (EVP_PKEY_derive_init(pctx) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm)) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set1_hkdf_key(pctx, st->cryptSt.evpKey, sizeof(*st->cryptSt.evpKey) * EVP_MAX_KEY_LENGTH) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_add1_hkdf_info(pctx, "authkey", strlen("authkey")) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_derive(pctx, st->cryptSt.hmacKey, &outlen) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -337,7 +337,7 @@ void genPassTag(struct dataStruct *st)
     #endif
 
     if (HMAC(EVP_get_digestbyname(st->cryptSt.mdAlgorithm), st->cryptSt.hmacKey, HMAC_KEY_SIZE, (const unsigned char *)st->cryptSt.userPass, strlen(st->cryptSt.userPass), st->cryptSt.passKeyedHash, st->cryptSt.HMACLengthPtr) == NULL) {
-        printError("Password keyed-hash failure");
+        PRINT_ERROR("Password keyed-hash failure");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -355,37 +355,37 @@ void genEvpKey(struct dataStruct *st)
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_SCRYPT, NULL);
 
     if (EVP_PKEY_derive_init(pctx) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set1_pbe_pass(pctx, st->cryptSt.userPass, strlen(st->cryptSt.userPass)) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set1_scrypt_salt(pctx, st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set_scrypt_N(pctx, st->cryptSt.nFactor) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set_scrypt_r(pctx, st->cryptSt.rFactor) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set_scrypt_p(pctx, st->cryptSt.pFactor) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_derive(pctx, st->cryptSt.evpKey, &outlen) <= 0) {
-        printError("scrypt failed\n");
+        PRINT_ERROR("scrypt failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -405,27 +405,27 @@ void HKDFKeyFile(struct dataStruct *st)
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
 
     if (EVP_PKEY_derive_init(pctx) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm)) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set1_hkdf_key(pctx, st->cryptSt.evpKey, sizeof(st->cryptSt.evpKey)) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, st->cryptSt.keyFileHash, sizeof(st->cryptSt.keyFileHash)) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_derive(pctx, st->cryptSt.evpKey, &outlen) <= 0) {
-        printError("HKDF failed\n");
+        PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
@@ -445,7 +445,7 @@ void genEvpSalt(struct dataStruct *st)
 
     for (int i = 0; i < EVP_SALT_SIZE; i++) {
         if (!RAND_bytes(&b, 1)) {
-            printError("Aborting: CSPRNG bytes may not be unpredictable");
+            PRINT_ERROR("Aborting: CSPRNG bytes may not be unpredictable");
             exit(EXIT_FAILURE);
         }
         st->cryptSt.evpSalt[i] = b;

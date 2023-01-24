@@ -14,12 +14,12 @@ int workThread(char action, struct dataStruct *st)
 
     FILE *inFile = fopen(st->fileNameSt.inputFileName, "rb");
     if (inFile == NULL) {
-        printFileError(st->fileNameSt.inputFileName, errno);
+        PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
         exit(EXIT_FAILURE);
     }
     FILE *outFile = fopen(st->fileNameSt.outputFileName, "wb+");
     if (outFile == NULL) {
-        printFileError(st->fileNameSt.outputFileName, errno);
+        PRINT_FILE_ERROR(st->fileNameSt.outputFileName, errno);
         exit(EXIT_FAILURE);
     }
 
@@ -48,8 +48,8 @@ int workThread(char action, struct dataStruct *st)
         
         /*Get passKeyedHashFromFile*/
         if (freadWErrCheck(st->cryptSt.passKeyedHashFromFile, sizeof(*st->cryptSt.passKeyedHashFromFile), PASS_KEYED_HASH_SIZE, inFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not read password hash");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not read password hash");
             exit(EXIT_FAILURE);
         }
     }
@@ -58,13 +58,13 @@ int workThread(char action, struct dataStruct *st)
 
         FILE *keyFile = fopen(st->fileNameSt.keyFileName, "rb");
         if (keyFile == NULL) {
-            printFileError(st->fileNameSt.keyFileName, errno);
+            PRINT_FILE_ERROR(st->fileNameSt.keyFileName, errno);
             exit(EXIT_FAILURE);
         }
 
         if (!st->optSt.passWordGiven) {
             if (freadWErrCheck(st->cryptSt.evpKey, sizeof(*st->cryptSt.evpKey), EVP_MAX_KEY_LENGTH, keyFile, st) != 0) {
-                printSysError(st->miscSt.returnVal);
+                PRINT_SYS_ERROR(st->miscSt.returnVal);
                 exit(EXIT_FAILURE);
             }
 
@@ -141,8 +141,8 @@ int workThread(char action, struct dataStruct *st)
         
         /*Prepend cryptoHeader to head of file*/
         if (fwriteWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, outFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not write salt");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not write salt");
             exit(EXIT_FAILURE);
         }
 
@@ -152,8 +152,8 @@ int workThread(char action, struct dataStruct *st)
         #endif
         /*Write passKeyedHash to head of file next to cryptoHeader*/
         if (fwriteWErrCheck(st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash), PASS_KEYED_HASH_SIZE, outFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not write password hash");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not write password hash");
             exit(EXIT_FAILURE);
         }
 
@@ -169,8 +169,8 @@ int workThread(char action, struct dataStruct *st)
         fseek(inFile, (fileSize + sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE) - MAC_SIZE, SEEK_SET);
 
         if (freadWErrCheck(st->cryptSt.fileMAC, sizeof(*st->cryptSt.fileMAC), MAC_SIZE, inFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not read MAC");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not read MAC");
             exit(EXIT_FAILURE);
         }
 
@@ -211,8 +211,8 @@ int workThread(char action, struct dataStruct *st)
     }
 
     if (fclose(inFile) != 0) {
-        printSysError(errno);
-        printError("Error closing file");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Error closing file");
         exit(EXIT_FAILURE);
     }
 
@@ -221,8 +221,8 @@ int workThread(char action, struct dataStruct *st)
     if (action == 'e') {
         /*Write the MAC to the end of the file*/
         if (fwriteWErrCheck(st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC), MAC_SIZE, outFile, st) != 0) {
-            printSysError(st->miscSt.returnVal);
-            printError("Could not write MAC");
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not write MAC");
             exit(EXIT_FAILURE);
         }
     }
@@ -233,8 +233,8 @@ int workThread(char action, struct dataStruct *st)
     #endif
 
     if (fclose(outFile) != 0) {
-        printSysError(errno);
-        printError("Could not close file");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not close file");
         exit(EXIT_FAILURE);
     }
 

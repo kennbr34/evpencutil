@@ -125,21 +125,21 @@ void allocateBuffers(struct dataStruct *st)
 {
     st->cryptSt.evpKey = calloc(EVP_MAX_KEY_LENGTH, sizeof(*st->cryptSt.evpKey));
     if (st->cryptSt.evpKey == NULL) {
-        printSysError(errno);
-        printError("Could not allocate evpKey buffer");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not allocate evpKey buffer");
         exit(EXIT_FAILURE);
     }
     st->cryptSt.evpSalt = calloc(EVP_SALT_SIZE, sizeof(*st->cryptSt.evpSalt));
     if (st->cryptSt.evpSalt == NULL) {
-        printSysError(errno);
-        printError("Could not allocate evpSalt buffer");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not allocate evpSalt buffer");
         exit(EXIT_FAILURE);
     }
 
     st->cryptSt.hmacKey = calloc(HMAC_KEY_SIZE, sizeof(*st->cryptSt.hmacKey));
     if (st->cryptSt.hmacKey == NULL) {
-        printSysError(errno);
-        printError("Could not allocate hmacKey buffer");
+        PRINT_SYS_ERROR(errno);
+        PRINT_ERROR("Could not allocate hmacKey buffer");
         exit(EXIT_FAILURE);
     }
 }
@@ -162,19 +162,19 @@ void cleanUpBuffers(void)
 void parseCryptoHeader(struct dataStruct *st) {
     FILE *inFile = fopen(st->fileNameSt.inputFileName, "rb");
     if (inFile == NULL) {
-        printFileError(st->fileNameSt.inputFileName, errno);
+        PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
         exit(EXIT_FAILURE);
     }
     
     /*Read cryptoHeader from head of cipher-text or fail if malformed*/
     if (freadWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, inFile, st) != 0) {
-        printSysError(st->miscSt.returnVal);
-        printError("Could not read salt");
+        PRINT_SYS_ERROR(st->miscSt.returnVal);
+        PRINT_ERROR("Could not read salt");
         exit(EXIT_FAILURE);
     }
     
     if(strcmp(st->cryptoHeader.evpEncUtilString,"evpencutil") != 0) {
-        printError("Not a file produced with evpencutil, exiting");
+        PRINT_ERROR("Not a file produced with evpencutil, exiting");
         exit(EXIT_FAILURE);
     }
     
@@ -478,7 +478,7 @@ void parseOptions(
             } else {
                 st->cryptSt.encAlgorithm = strdup(optarg);
                 if (st->cryptSt.encAlgorithm == NULL) {
-                    printSysError(errno);
+                    PRINT_SYS_ERROR(errno);
                     exit(EXIT_FAILURE);
                 }
 
@@ -499,7 +499,7 @@ void parseOptions(
             } else {
                 st->cryptSt.mdAlgorithm = strdup(optarg);
                 if (st->cryptSt.mdAlgorithm == NULL) {
-                    printSysError(errno);
+                    PRINT_SYS_ERROR(errno);
                     exit(EXIT_FAILURE);
                 }
 
