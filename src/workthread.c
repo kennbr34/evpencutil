@@ -50,6 +50,7 @@ int workThread(char action, struct dataStruct *st)
         if (freadWErrCheck(st->cryptSt.passKeyedHashFromFile, sizeof(*st->cryptSt.passKeyedHashFromFile), PASS_KEYED_HASH_SIZE, inFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not read password hash");
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
     }
@@ -59,6 +60,7 @@ int workThread(char action, struct dataStruct *st)
         FILE *keyFile = fopen(st->fileNameSt.keyFileName, "rb");
         if (keyFile == NULL) {
             PRINT_FILE_ERROR(st->fileNameSt.keyFileName, errno);
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
 
@@ -119,6 +121,7 @@ int workThread(char action, struct dataStruct *st)
             #ifdef gui
             strcpy(st->guiSt.statusMessage, "Wrong password");
             #endif
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
     }
@@ -143,6 +146,7 @@ int workThread(char action, struct dataStruct *st)
         if (fwriteWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, outFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not write salt");
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
 
@@ -154,6 +158,7 @@ int workThread(char action, struct dataStruct *st)
         if (fwriteWErrCheck(st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash), PASS_KEYED_HASH_SIZE, outFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not write password hash");
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
 
@@ -171,6 +176,7 @@ int workThread(char action, struct dataStruct *st)
         if (freadWErrCheck(st->cryptSt.fileMAC, sizeof(*st->cryptSt.fileMAC), MAC_SIZE, inFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not read MAC");
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
 
@@ -190,6 +196,7 @@ int workThread(char action, struct dataStruct *st)
             #ifdef gui
             strcpy(st->guiSt.statusMessage, "Authentication failure");
             #endif
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
 
@@ -213,6 +220,7 @@ int workThread(char action, struct dataStruct *st)
     if (fclose(inFile) != 0) {
         PRINT_SYS_ERROR(errno);
         PRINT_ERROR("Error closing file");
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
 
@@ -223,6 +231,7 @@ int workThread(char action, struct dataStruct *st)
         if (fwriteWErrCheck(st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC), MAC_SIZE, outFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not write MAC");
+            remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
     }
@@ -235,6 +244,7 @@ int workThread(char action, struct dataStruct *st)
     if (fclose(outFile) != 0) {
         PRINT_SYS_ERROR(errno);
         PRINT_ERROR("Could not close file");
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
 

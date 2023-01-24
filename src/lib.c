@@ -163,6 +163,7 @@ void parseCryptoHeader(struct dataStruct *st) {
     FILE *inFile = fopen(st->fileNameSt.inputFileName, "rb");
     if (inFile == NULL) {
         PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     
@@ -170,11 +171,13 @@ void parseCryptoHeader(struct dataStruct *st) {
     if (freadWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, inFile, st) != 0) {
         PRINT_SYS_ERROR(st->miscSt.returnVal);
         PRINT_ERROR("Could not read salt");
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     
     if(strcmp(st->cryptoHeader.evpEncUtilString,"evpencutil") != 0) {
         PRINT_ERROR("Not a file produced with evpencutil, exiting");
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     
@@ -187,11 +190,13 @@ void parseCryptoHeader(struct dataStruct *st) {
     char *token = strtok_r(st->cryptoHeader.algorithmString, ":",&token_save_ptr);
     if (token == NULL) {
         printf("Could not parse header.\nIs %s a evpencutil file?\n", st->fileNameSt.inputFileName);
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     st->cryptSt.evpCipher = EVP_get_cipherbyname(token);
     if (!st->cryptSt.evpCipher) {
         fprintf(stderr, "Could not load cipher: %s\n", token);
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     if(st->cryptSt.encAlgorithm != NULL) {
@@ -206,11 +211,13 @@ void parseCryptoHeader(struct dataStruct *st) {
     token = strtok_r(NULL, ":", &token_save_ptr);
     if (token == NULL) {
         printf("Could not parse header.\nIs %s a evpencutil file?\n", st->fileNameSt.inputFileName);
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     st->cryptSt.evpDigest = EVP_get_digestbyname(token);
     if (!st->cryptSt.evpDigest) {
         fprintf(stderr, "Could not load digest: %s\n", token);
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     if(st->cryptSt.mdAlgorithm != NULL) {

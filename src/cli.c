@@ -9,7 +9,7 @@
 struct termios termiosOld, termiosNew;
 struct cryptoStruct *cryptStGlobal = NULL;
 
-char *getPass(const char *prompt, char *paddedPass)
+char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 {
     size_t len = 0;
     int i = 0;
@@ -18,6 +18,7 @@ char *getPass(const char *prompt, char *paddedPass)
     unsigned char *paddedPassTmp = calloc(sizeof(*paddedPassTmp), MAX_PASS_SIZE);
     if (paddedPassTmp == NULL) {
         PRINT_SYS_ERROR(errno);
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
 
@@ -26,6 +27,7 @@ char *getPass(const char *prompt, char *paddedPass)
         /* Restore terminal. */
         (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
         fprintf(stderr, "\nPassword was too large\n");
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
     memcpy(paddedPass, paddedPassTmp, sizeof(*paddedPass) * MAX_PASS_SIZE);
@@ -36,18 +38,24 @@ char *getPass(const char *prompt, char *paddedPass)
     int nread = 0;
 
     /* Turn echoing off and fail if we can’t. */
-    if (tcgetattr(fileno(stdin), &termiosOld) != 0)
+    if (tcgetattr(fileno(stdin), &termiosOld) != 0) {
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
+    }
     termiosNew = termiosOld;
     termiosNew.c_lflag &= ~ECHO;
-    if (tcsetattr(fileno(stdin), TCSAFLUSH, &termiosNew) != 0)
+    if (tcsetattr(fileno(stdin), TCSAFLUSH, &termiosNew) != 0) {
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
+    }
 
     /* Read the password. */
     fprintf(stderr, "\n%s", prompt);
     nread = getline(&pass, &len, stdin);
-    if (nread == -1)
+    if (nread == -1) {
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
+    }
     else if (nread > (MAX_PASS_SIZE - 1)) {
         /* Restore terminal. */
         (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
@@ -55,6 +63,7 @@ char *getPass(const char *prompt, char *paddedPass)
         free(pass);
         pass = NULL;
         fprintf(stderr, "\nPassword was too large\n");
+        remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     } else {
         /*Replace newline with null terminator*/
