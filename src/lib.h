@@ -74,10 +74,13 @@ struct optionsStruct {
     bool outputFileGiven;
     bool keyFileGiven;
     bool passWordGiven;
+    bool getPassFromPrompt;
+    bool getPassFromArg;
+    bool verifyPass;
+    bool displayPass;
     bool keyBufSizeGiven;
     bool authBufSizeGiven;
     bool fileBufSizeGiven;
-    bool gotPassFromCmdLine;
     bool nFactorGiven;
     bool rFactorGiven;
     bool pFactorGiven;

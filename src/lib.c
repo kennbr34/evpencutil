@@ -9,7 +9,6 @@
 #include "lib.h"
 
 extern struct cryptoStruct *cryptStGlobal;
-struct termios termiosOld, termiosNew;
 
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
@@ -255,6 +254,9 @@ uint8_t printSyntax(char *arg)
 \n-i,--input-file - input file\
 \n-o,--output-file - output file\
 \n-p,--password - password to use\
+\n-P,--prompt-for-pass - get password from prompt instead of as argument\
+\n-V,--verify-pass - Will cause the program to ask you to verify the password you just entered via prompt\
+\n-D,--display-pass - Will turn on echoing so you can see the password as you type it into the prompt\
 \n-w,--work-factors - [N=],[r=],[p=]\
 \n\t N=num\
 \n\t\t N factor for scrypt to use. Must be a power of 2. Default 1048576\
@@ -282,6 +284,7 @@ Hudson (tjh@cryptsoft.com).\n");
 
 char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 {
+    struct termios termiosOld, termiosNew;
     size_t len = 0;
     int i = 0;
     int passLength = 0;
@@ -295,8 +298,10 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 
     if (!RAND_bytes(paddedPassTmp, MAX_PASS_SIZE)) {
         fprintf(stderr, "Failure: CSPRNG bytes could not be made unpredictable\n");
-        /* Restore terminal. */
-        (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+        if(!st->optSt.displayPass) {
+            /* Restore terminal. */
+            (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+        }
         fprintf(stderr, "\nPassword was too large\n");
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
@@ -308,16 +313,18 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 
     int nread = 0;
 
-    /* Turn echoing off and fail if we can’t. */
-    if (tcgetattr(fileno(stdin), &termiosOld) != 0) {
-        remove(st->fileNameSt.outputFileName);
-        exit(EXIT_FAILURE);
-    }
-    termiosNew = termiosOld;
-    termiosNew.c_lflag &= ~ECHO;
-    if (tcsetattr(fileno(stdin), TCSAFLUSH, &termiosNew) != 0) {
-        remove(st->fileNameSt.outputFileName);
-        exit(EXIT_FAILURE);
+    if(!st->optSt.displayPass) {
+        /* Turn echoing off and fail if we can’t. */
+        if (tcgetattr(fileno(stdin), &termiosOld) != 0) {
+            remove(st->fileNameSt.outputFileName);
+            exit(EXIT_FAILURE);
+        }
+        termiosNew = termiosOld;
+        termiosNew.c_lflag &= ~ECHO;
+        if (tcsetattr(fileno(stdin), TCSAFLUSH, &termiosNew) != 0) {
+            remove(st->fileNameSt.outputFileName);
+            exit(EXIT_FAILURE);
+        }
     }
 
     /* Read the password. */
@@ -328,8 +335,10 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     else if (nread > (MAX_PASS_SIZE - 1)) {
-        /* Restore terminal. */
-        (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+        if(!st->optSt.displayPass) {
+            /* Restore terminal. */
+            (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+        }
         OPENSSL_cleanse(pass, sizeof(*pass) * nread);
         free(pass);
         pass = NULL;
@@ -341,8 +350,10 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
         pass[nread - 1] = '\0';
     }
 
-    /* Restore terminal. */
-    (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+    if(!st->optSt.displayPass) {
+        /* Restore terminal. */
+        (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+    }
 
     fprintf(stderr, "\n");
 
@@ -374,6 +385,9 @@ void parseOptions(
             {"help", no_argument, 0, 'h'},
             {"encrypt", no_argument, 0, 'e'},
             {"decrypt", no_argument, 0, 'd'},
+            {"prompt-for-pass", no_argument, 0, 'P'},
+            {"verify-pass", no_argument, 0, 'V'},
+            {"display-pass", no_argument, 0, 'D'},
             {"input-file", required_argument, 0, 'i'},
             {"output-file", required_argument, 0, 'o'},
             {"key-file", required_argument, 0, 'k'},
@@ -385,7 +399,7 @@ void parseOptions(
         char *subopts;
         char *value;
 
-        c = getopt_long(argc, argv, "hqedi:o:k:p:w:b:c:m:",
+        c = getopt_long(argc, argv, "hqedPVDi:o:k:p:w:b:c:m:",
                         long_options, &option_index);
         if (c == -1)
             break;
@@ -404,6 +418,16 @@ void parseOptions(
             break;
         case 'd':
             st->optSt.decrypt = true;
+            break;
+        case 'V':
+            st->optSt.verifyPass = true;
+            break;
+        case 'D':
+            st->optSt.displayPass = true;
+            break;
+        case 'P':
+            st->optSt.getPassFromPrompt = true;
+            st->optSt.passWordGiven = true;
             break;
         case 'i':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
@@ -441,17 +465,9 @@ void parseOptions(
                 errflg++;
                 break;
             } else {
-                st->optSt.passWordGiven = true;
-                #ifdef gui
+                st->optSt.getPassFromArg = true;
                 snprintf(st->cryptSt.userPass, MAX_PASS_SIZE, "%s", optarg);
-                #else
-                if(strncmp("prompt", optarg, MAX_PASS_SIZE) == 0) {
-                    //TODO find some way to verify the password
-                    getPass("Enter Password: ", st->cryptSt.userPass, st);
-                } else {
-                    snprintf(st->cryptSt.userPass, MAX_PASS_SIZE, "%s", optarg);
-                }
-                #endif
+                st->optSt.passWordGiven = true;
             }
             break;
         case 'w':
@@ -634,6 +650,11 @@ void parseOptions(
 
     if (!strcmp(st->fileNameSt.inputFileName, st->fileNameSt.outputFileName)) {
         fprintf(stderr, "Input file and output file are the same\n");
+        errflg++;
+    }
+    
+    if (st->optSt.getPassFromPrompt && st->optSt.getPassFromArg) {
+        fprintf(stderr, "Supply the password either via prompt or via arg, not both\n");
         errflg++;
     }
     

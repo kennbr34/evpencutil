@@ -36,6 +36,17 @@ int main(int argc, char *argv[])
     st.cryptSt.fileBufSize = 1024 * 1024;
 
     parseOptions(argc, argv, &st);
+    
+    if(st.optSt.getPassFromPrompt) {
+        getPass("Enter password: ", st.cryptSt.userPass, &st);
+        if(st.optSt.verifyPass) {
+            getPass("Verify password: ", st.cryptSt.userPassToVerify, &st);
+            if(strcmp(st.cryptSt.userPass,st.cryptSt.userPassToVerify) != 0) {
+                printf("Passwords didn't match\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
 
     allocateBuffers(&st);
 

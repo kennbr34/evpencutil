@@ -73,15 +73,27 @@ Do the previous but use chacha20 instead of AES
 
     evpencutil-cli -e -i file -o file.enc -p password -k keyfile -w N=1024,p=2 -s message_buffer=64m -c chacha20
     
-Decrypt the previously created file
+Do the previous but enter the password via prompt instead of as a command line argument
 
-    evpencutil-cli -d -i file.enc -o file.plain -p password -k keyfile
+    evpencutil-cli -e -i file -o file.enc -P -k keyfile -w N=1024,p=2 -s message_buffer=64m -c chacha20
+    
+Do the previous but verify the password entered by prompt
+
+    evpencutil-cli -e -i file -o file.enc -P -V -k keyfile -w N=1024,p=2 -s message_buffer=64m -c chacha20
+    
+Do the previous but display the password as it's typed instead of verifying it
+
+    evpencutil-cli -e -i file -o file.enc -P -D -k keyfile -w N=1024,p=2 -s message_buffer=64m -c chacha20
+    
+Decrypt the previously created file (assume the password entered at prompt was 'password')
+
+    evpencutil-cli -d -i file.enc -o file.plain -P -k keyfile
     
 Perform the same decryption but launch with the GUI instead
 
-    evpencutil-cli -d -i file.enc -o file.plain -p password -k keyfile
+    evpencutil-gui -d -i file.enc -o file.plain -p password -k keyfile
     
 Do the previous but close the GUI upon completion
 
-    evpencutil-cli -q -d -i file.enc -o file.plain -p password -k keyfile
+    evpencutil-gui -q -d -i file.enc -o file.plain -p password -k keyfile
     
