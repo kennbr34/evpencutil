@@ -1,12 +1,15 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <termios.h>
 #include <getopt.h>
 #include <openssl/evp.h>
 #include <openssl/crypto.h>
+#include <openssl/rand.h>
 #include "lib.h"
 
 extern struct cryptoStruct *cryptStGlobal;
+struct termios termiosOld, termiosNew;
 
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
@@ -277,6 +280,84 @@ Hudson (tjh@cryptsoft.com).\n");
     return EXIT_FAILURE;
 }
 
+char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
+{
+    size_t len = 0;
+    int i = 0;
+    int passLength = 0;
+    char *pass = NULL;
+    unsigned char *paddedPassTmp = calloc(sizeof(*paddedPassTmp), MAX_PASS_SIZE);
+    if (paddedPassTmp == NULL) {
+        PRINT_SYS_ERROR(errno);
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
+
+    if (!RAND_bytes(paddedPassTmp, MAX_PASS_SIZE)) {
+        fprintf(stderr, "Failure: CSPRNG bytes could not be made unpredictable\n");
+        /* Restore terminal. */
+        (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+        fprintf(stderr, "\nPassword was too large\n");
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
+    memcpy(paddedPass, paddedPassTmp, sizeof(*paddedPass) * MAX_PASS_SIZE);
+    OPENSSL_cleanse(paddedPassTmp, sizeof(*paddedPassTmp) * MAX_PASS_SIZE);
+    free(paddedPassTmp);
+    paddedPassTmp = NULL;
+
+    int nread = 0;
+
+    /* Turn echoing off and fail if we can’t. */
+    if (tcgetattr(fileno(stdin), &termiosOld) != 0) {
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
+    termiosNew = termiosOld;
+    termiosNew.c_lflag &= ~ECHO;
+    if (tcsetattr(fileno(stdin), TCSAFLUSH, &termiosNew) != 0) {
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Read the password. */
+    fprintf(stderr, "%s", prompt);
+    nread = getline(&pass, &len, stdin);
+    if (nread == -1) {
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
+    else if (nread > (MAX_PASS_SIZE - 1)) {
+        /* Restore terminal. */
+        (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+        OPENSSL_cleanse(pass, sizeof(*pass) * nread);
+        free(pass);
+        pass = NULL;
+        fprintf(stderr, "\nPassword was too large\n");
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    } else {
+        /*Replace newline with null terminator*/
+        pass[nread - 1] = '\0';
+    }
+
+    /* Restore terminal. */
+    (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
+
+    fprintf(stderr, "\n");
+
+    /*Copy pass into paddedPass then remove sensitive information*/
+    passLength = strlen(pass);
+    for (i = 0; i < passLength + 1; i++)
+        paddedPass[i] = pass[i];
+
+    OPENSSL_cleanse(pass, sizeof(*pass) * nread);
+    free(pass);
+    pass = NULL;
+
+    return paddedPass;
+}
+
 void parseOptions(
     int argc,
     char *argv[],
@@ -361,7 +442,16 @@ void parseOptions(
                 break;
             } else {
                 st->optSt.passWordGiven = true;
+                #ifdef gui
                 snprintf(st->cryptSt.userPass, MAX_PASS_SIZE, "%s", optarg);
+                #else
+                if(strncmp("prompt", optarg, MAX_PASS_SIZE) == 0) {
+                    //TODO find some way to verify the password
+                    getPass("Enter Password: ", st->cryptSt.userPass, st);
+                } else {
+                    snprintf(st->cryptSt.userPass, MAX_PASS_SIZE, "%s", optarg);
+                }
+                #endif
             }
             break;
         case 'w':

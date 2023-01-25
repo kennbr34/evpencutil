@@ -199,6 +199,7 @@ uint8_t printSyntax(char *arg);
 void signalHandler(int signum);
 void makeMultipleOf(size_t *numberToChange, size_t multiple);
 int workThread(char action, struct dataStruct *st);
+char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st);
 void parseOptions(int argc, char *argv[], struct dataStruct *st);
 void bytesPrefixed(char *prefixedString, unsigned long long bytes);
 size_t getBufSizeMultiple(char *value);
