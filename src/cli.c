@@ -1,4 +1,7 @@
 #include <openssl/crypto.h>
+#if OPENSSL_VERSION_MAJOR >= 3
+#include <openssl/provider.h>
+#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
