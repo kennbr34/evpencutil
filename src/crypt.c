@@ -336,6 +336,12 @@ void genHMACKey(struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
+    if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE) <= 0) {
+        PRINT_ERROR("HKDF failed\n");
+        ERR_print_errors_fp(stderr);
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
     if (EVP_PKEY_CTX_add1_hkdf_info(pctx, "authkey", strlen("authkey")) <= 0) {
         PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
@@ -453,6 +459,12 @@ void HKDFKeyFile(struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, st->cryptSt.keyFileHash, sizeof(st->cryptSt.keyFileHash)) <= 0) {
+        PRINT_ERROR("HKDF failed\n");
+        ERR_print_errors_fp(stderr);
+        remove(st->fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_CTX_add1_hkdf_info(pctx, "keyfile", strlen("keyfile")) <= 0) {
         PRINT_ERROR("HKDF failed\n");
         ERR_print_errors_fp(stderr);
         remove(st->fileNameSt.outputFileName);
