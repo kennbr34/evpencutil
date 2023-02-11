@@ -251,9 +251,15 @@ int workThread(char action, struct dataStruct *st)
     #ifdef gui
     if (action == 'e') {
         sprintf(st->guiSt.statusMessage, "File encrypted... %0.2fs elapsed,%0.2f MB/s", st->guiSt.totalTime, st->guiSt.averageRate);
+        if(st->optSt.benchmark) {
+            writeBenchmark(st->guiSt.totalTime,st->guiSt.averageRate,st);
+        }
         *(st->guiSt.overallProgressFraction) = 1;
     } else if (action == 'd') {
         sprintf(st->guiSt.statusMessage, "File decrypted... %0.2fs elapsed,%0.2f MB/s", st->guiSt.totalTime, st->guiSt.averageRate);
+        if(st->optSt.benchmark) {
+            writeBenchmark(st->guiSt.totalTime,st->guiSt.averageRate,st);
+        }
         *(st->guiSt.overallProgressFraction) = 1;
     }
     #endif

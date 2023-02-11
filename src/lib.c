@@ -369,6 +369,29 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
     return paddedPass;
 }
 
+#ifdef gui
+int writeBenchmark(double time, double rate, struct dataStruct *st) {
+    FILE *benchmarkFile = fopen("benchmark.txt","a");
+    if(benchmarkFile == NULL) {
+        PRINT_FILE_ERROR("benchmark.txt",errno);
+        return 1;
+    }
+    
+    fprintf(benchmarkFile,"Mode: %s\n", st->guiSt.encryptOrDecrypt);
+    fprintf(benchmarkFile,"Cipher: %s\n", st->cryptSt.encAlgorithm);
+    fprintf(benchmarkFile,"Digest: %s\n", st->cryptSt.mdAlgorithm);
+    fprintf(benchmarkFile,"FileBuffer: %s\n", st->guiSt.fileBufSizeComboBoxText);
+    fprintf(benchmarkFile,"AuthBuffer: %s\n", st->guiSt.authBufSizeComboBoxText);
+    fprintf(benchmarkFile,"Elapsed: %0.2fs\n", time);
+    fprintf(benchmarkFile,"Throughput: %0.2f MB/s\n", rate);
+    fprintf(benchmarkFile,"\n");
+    
+    fclose(benchmarkFile);
+    
+    return 0;
+}
+#endif
+
 void parseOptions(
     int argc,
     char *argv[],
@@ -385,6 +408,7 @@ void parseOptions(
             {"help", no_argument, 0, 'h'},
             {"encrypt", no_argument, 0, 'e'},
             {"decrypt", no_argument, 0, 'd'},
+            {"benchmark",no_argument, 0, 'B'},
             {"prompt-for-pass", no_argument, 0, 'P'},
             {"verify-pass", no_argument, 0, 'V'},
             {"display-pass", no_argument, 0, 'D'},
@@ -399,7 +423,7 @@ void parseOptions(
         char *subopts;
         char *value;
 
-        c = getopt_long(argc, argv, "hqedPVDi:o:k:p:w:b:c:m:",
+        c = getopt_long(argc, argv, "hqedPVDBi:o:k:p:w:b:c:m:",
                         long_options, &option_index);
         if (c == -1)
             break;
@@ -418,6 +442,9 @@ void parseOptions(
             break;
         case 'd':
             st->optSt.decrypt = true;
+            break;
+        case 'B':
+            st->optSt.benchmark = true;
             break;
         case 'V':
             st->optSt.verifyPass = true;
@@ -529,9 +556,9 @@ void parseOptions(
                 }
             }
             break;
-        case 's':
+        case 'b':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
-                fprintf(stderr, "Option -s requires an argument\n");
+                fprintf(stderr, "Option -b requires an argument\n");
                 errflg++;
                 break;
             } else {
@@ -570,8 +597,6 @@ void parseOptions(
 
                         st->optSt.fileBufSizeGiven = true;
 
-                        /*Divide the amount specified by the size of uint64_t since it will
-                         * be multipled later*/
                         st->cryptSt.fileBufSize = (atol(value) * getBufSizeMultiple(value));
                         makeMultipleOf(&st->cryptSt.fileBufSize, sizeof(uint64_t));
                         break;

@@ -70,6 +70,7 @@ struct fileNames {
 struct optionsStruct {
     bool encrypt;
     bool decrypt;
+    bool benchmark;
     bool inputFileGiven;
     bool outputFileGiven;
     bool keyFileGiven;
@@ -208,4 +209,5 @@ void bytesPrefixed(char *prefixedString, unsigned long long bytes);
 size_t getBufSizeMultiple(char *value);
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);
+int writeBenchmark(double time, double rate, struct dataStruct *st);
 void parseCryptoHeader(struct dataStruct *st);
