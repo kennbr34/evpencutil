@@ -40,7 +40,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
         EVP_DecryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.evpSalt);
     }
 
-    uint64_t bytesWritten = 0;
+    uint64_t bytesWritten = 0, bytesRead = 0, amountReadLast = 0;
     uint64_t remainingBytes = fileSize;
     uint32_t evpOutputLength = 0;
 
@@ -50,7 +50,7 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
         #ifdef gui
         st->guiSt.startLoop = clock();
-        st->guiSt.startBytes = (fileSize - remainingBytes);
+        st->guiSt.startBytes = bytesWritten;
         #endif
 
         if (st->cryptSt.fileBufSize > remainingBytes) {
@@ -65,7 +65,17 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
             remove(st->fileNameSt.outputFileName);
             exit(EXIT_FAILURE);
         }
-
+        
+        amountReadLast = st->miscSt.freadAmt;
+        bytesRead += amountReadLast;
+        
+        if(amountReadLast < st->cryptSt.fileBufSize) {
+			remainingBytes = 0;
+			st->cryptSt.fileBufSize = amountReadLast;
+		} else {
+			remainingBytes -= st->cryptSt.fileBufSize;
+		}
+		
         if (st->optSt.encrypt) {
             if (!EVP_EncryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
                 fprintf(stderr, "EVP_EncryptUpdate failed\n");
@@ -109,13 +119,11 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
         HMAC_Update(hmac_ctx, outBuffer, (sizeof(*outBuffer) * evpOutputLength));
 
-        remainingBytes -= st->cryptSt.fileBufSize;
-
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
 
         st->guiSt.endLoop = clock();
-        st->guiSt.endBytes = (fileSize - remainingBytes);
+        st->guiSt.endBytes = bytesWritten;
 
         st->guiSt.loopTime = (double)(st->guiSt.endLoop - st->guiSt.startLoop) / CLOCKS_PER_SEC;
         st->guiSt.totalTime = (double)(st->guiSt.endLoop - st->guiSt.startTime) / CLOCKS_PER_SEC;

@@ -19,7 +19,7 @@ uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, stru
         expectedRetVal = nmemb;
     }
     
-    int retVal = fread(ptr, size, nmemb, stream);
+    uint64_t retVal = fread(ptr, size, nmemb, stream);
     
     if ( retVal != expectedRetVal ){
         if (ferror(stream) || ( retVal == 0 && !feof(stream) )) {
@@ -27,6 +27,8 @@ uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, stru
             return errno;
         }
     }
+    
+    st->miscSt.freadAmt = retVal;
 
     return 0;
 }
@@ -56,7 +58,14 @@ uint64_t getFileSize(const char *filename)
 {
     struct stat st;
     stat(filename, &st);
-    return st.st_size;
+    
+    /*If file is a FIFO, return the max value possible for type*/
+    
+    if(S_ISFIFO(st.st_mode)) {
+		return (uint64_t)~0;
+	} else {
+		return st.st_size;
+	}
 }
 
 size_t getBufSizeMultiple(char *value)
@@ -248,11 +257,13 @@ uint8_t printSyntax(char *arg)
 {
     printf("\
 \nUse: \
-\n\n%s [-e|-d] -i infile -o outfile [-p pass] [-k keyfile] [-s sizes]\
+\n\n%s [-e|-d|-c|-m] -i infile -o outfile [-p pass] [-k keyfile] [-s sizes]\
 \n-e,--encrypt - encrypt infile to outfile\
+\n-c, --cipher - encryption algorithm to use\
+\n-m, --message-digest - message digest algorithm to use\
 \n-d,--decrypt - decrypt infile to outfile\
-\n-i,--input-file - input file\
-\n-o,--output-file - output file\
+\n-i,--input-file - input file. Use '-' for standard input\
+\n-o,--output-file - output file. Use '-' for standard output\
 \n-p,--password - password to use\
 \n-P,--prompt-for-pass - get password from prompt instead of as argument\
 \n-V,--verify-pass - Will cause the program to ask you to verify the password you just entered via prompt\
@@ -418,6 +429,8 @@ void parseOptions(
             {"password", required_argument, 0, 'p'},
             {"work-factors", required_argument, 0, 'w'},
             {"buffer-sizes", required_argument, 0, 'b'},
+            {"cipher", required_argument, 0, 'c'},
+            {"message-digest", required_argument, 0, 'm'},
             {0, 0, 0, 0}};
 
         char *subopts;
@@ -461,7 +474,12 @@ void parseOptions(
                 fprintf(stderr, "Option -i requires an argument\n");
                 errflg++;
                 break;
-            } else {
+            } else if (optarg[0] == '-') {
+				st->optSt.inputFileGiven = true;
+				st->fileNameSt.inputFileName = strdup("stdin");
+				
+				st->optSt.readFromStdin = true;
+			} else {
                 st->optSt.inputFileGiven = true;
                 st->fileNameSt.inputFileName = strdup(optarg);
             }
@@ -471,7 +489,12 @@ void parseOptions(
                 fprintf(stderr, "Option -o requires an argument\n");
                 errflg++;
                 break;
-            } else {
+            } else if (optarg[0] == '-') {
+				st->optSt.outputFileGiven = true;
+				st->fileNameSt.outputFileName = strdup("stdout");
+				
+				st->optSt.writeToStdout = true;
+			} else {
                 st->optSt.outputFileGiven = true;
                 st->fileNameSt.outputFileName = strdup(optarg);
             }

@@ -72,6 +72,8 @@ struct optionsStruct {
     bool decrypt;
     bool benchmark;
     bool inputFileGiven;
+    bool readFromStdin;
+    bool writeToStdout;
     bool outputFileGiven;
     bool keyFileGiven;
     bool passWordGiven;
@@ -92,6 +94,7 @@ struct optionsStruct {
 
 struct miscStruct {
     uint64_t returnVal;
+    uint64_t freadAmt;
 };
 
 #ifdef gui

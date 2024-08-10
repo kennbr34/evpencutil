@@ -12,18 +12,32 @@ int workThread(char action, struct dataStruct *st)
     if (p)
         return 0;
 
-    FILE *inFile = fopen(st->fileNameSt.inputFileName, "rb");
-    if (inFile == NULL) {
-        PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
-        exit(EXIT_FAILURE);
+    FILE *inFile;
+    
+    if(st->optSt.readFromStdin) {
+		inFile = stdin;
+	} else {
+	    inFile = fopen(st->fileNameSt.inputFileName, "rb");
+	    if (inFile == NULL) {
+	        PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
+	        exit(EXIT_FAILURE);
     }
-    FILE *outFile = fopen(st->fileNameSt.outputFileName, "wb+");
-    if (outFile == NULL) {
-        PRINT_FILE_ERROR(st->fileNameSt.outputFileName, errno);
-        exit(EXIT_FAILURE);
-    }
+	}
+    
+    
+    FILE *outFile;
+    
+    if(st->optSt.writeToStdout) {
+		outFile = stdout;
+	} else {    
+	    outFile = fopen(st->fileNameSt.outputFileName, "wb+");
+	    if (outFile == NULL) {
+	        PRINT_FILE_ERROR(st->fileNameSt.outputFileName, errno);
+	        exit(EXIT_FAILURE);
+	    }
+	}
 
-    uint64_t fileSize;
+    uint64_t fileSize = 0;
 
     #ifdef gui
     st->guiSt.startTime = clock();
@@ -127,7 +141,11 @@ int workThread(char action, struct dataStruct *st)
     }
 
     if (action == 'e') {
-        fileSize = getFileSize(st->fileNameSt.inputFileName);
+		if(st->optSt.readFromStdin) {
+			fileSize = (uint64_t)~0;
+		} else {
+			fileSize = getFileSize(st->fileNameSt.inputFileName);
+		}
 
         #ifdef gui
         strcpy(st->guiSt.statusMessage, "Writing salt...");

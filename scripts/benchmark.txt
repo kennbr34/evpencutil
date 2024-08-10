@@ -1,0 +1,768 @@
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.07s
+Throughput: 562.84 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.11s
+Throughput: 438.47 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 4.65s
+Throughput: 301.55 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 3.59s
+Throughput: 563.44 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 2.88s
+Throughput: 533.10 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 3.67s
+Throughput: 540.86 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 2.78s
+Throughput: 549.13 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 3.74s
+Throughput: 529.91 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 256 Mb
+Elapsed: 2.94s
+Throughput: 531.75 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 256 Mb
+Elapsed: 4.05s
+Throughput: 501.42 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 3.32s
+Throughput: 466.50 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 4.39s
+Throughput: 460.47 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 3.90s
+Throughput: 398.93 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 5.02s
+Throughput: 411.24 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 2.79s
+Throughput: 549.58 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.52s
+Throughput: 538.17 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 2.68s
+Throughput: 546.91 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.48s
+Throughput: 545.56 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 2.66s
+Throughput: 550.85 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.56s
+Throughput: 523.80 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 1 Mb
+Elapsed: 2.80s
+Throughput: 518.34 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.65s
+Throughput: 504.28 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 2.88s
+Throughput: 498.56 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.73s
+Throughput: 484.65 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 3.29s
+Throughput: 411.11 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 4.17s
+Throughput: 397.51 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 4.92s
+Throughput: 349.51 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 6.88s
+Throughput: 351.85 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 5.07s
+Throughput: 340.38 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 7.17s
+Throughput: 332.29 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 5.08s
+Throughput: 340.92 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 7.24s
+Throughput: 331.93 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 5.11s
+Throughput: 337.95 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 7.26s
+Throughput: 330.82 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 5.56s
+Throughput: 315.01 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 7.98s
+Throughput: 309.78 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 6.23s
+Throughput: 275.61 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 8.60s
+Throughput: 272.42 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.08s
+Throughput: 334.55 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.07s
+Throughput: 330.62 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 4.98s
+Throughput: 339.59 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.05s
+Throughput: 333.01 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 4.99s
+Throughput: 339.64 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.11s
+Throughput: 323.77 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.34s
+Throughput: 307.79 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.23s
+Throughput: 309.50 MB/s
+
+Mode: encrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 5.56s
+Throughput: 287.61 MB/s
+
+Mode: decrypt
+Cipher: aes-256-ctr
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 7.81s
+Throughput: 275.16 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.18s
+Throughput: 437.13 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.86s
+Throughput: 455.70 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 3.23s
+Throughput: 432.64 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 4.07s
+Throughput: 439.85 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 3.21s
+Throughput: 440.55 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 4.15s
+Throughput: 430.98 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 3.39s
+Throughput: 418.46 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 4.21s
+Throughput: 426.88 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 256 Mb
+Elapsed: 3.46s
+Throughput: 420.62 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 256 Mb
+Elapsed: 4.49s
+Throughput: 409.01 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 3.80s
+Throughput: 383.34 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 4.83s
+Throughput: 377.66 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 4.27s
+Throughput: 348.20 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 5.61s
+Throughput: 333.06 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.40s
+Throughput: 416.70 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.96s
+Throughput: 432.90 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.14s
+Throughput: 438.48 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.99s
+Throughput: 429.57 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.21s
+Throughput: 428.89 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 4.03s
+Throughput: 424.72 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.34s
+Throughput: 409.39 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 256 Mb
+AuthBuffer: 1 Mb
+Elapsed: 4.14s
+Throughput: 403.63 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 3.49s
+Throughput: 384.20 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 4.32s
+Throughput: 377.74 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 3.79s
+Throughput: 342.89 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha256
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 4.67s
+Throughput: 334.42 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.53s
+Throughput: 292.30 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 1 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.36s
+Throughput: 299.78 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 5.55s
+Throughput: 291.14 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 16 Mb
+Elapsed: 7.55s
+Throughput: 294.25 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 5.94s
+Throughput: 278.36 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 32 Mb
+Elapsed: 7.75s
+Throughput: 285.54 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 5.60s
+Throughput: 291.03 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 64 Mb
+Elapsed: 7.81s
+Throughput: 283.86 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 6.10s
+Throughput: 268.61 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 512 Mb
+Elapsed: 8.34s
+Throughput: 267.91 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 6.64s
+Throughput: 247.17 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Gb
+Elapsed: 9.50s
+Throughput: 231.40 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.62s
+Throughput: 285.47 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 16 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.62s
+Throughput: 283.34 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.51s
+Throughput: 291.11 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 32 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.52s
+Throughput: 286.00 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.50s
+Throughput: 290.38 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 64 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.57s
+Throughput: 284.75 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 5.78s
+Throughput: 269.88 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 512 Mb
+AuthBuffer: 1 Mb
+Elapsed: 7.78s
+Throughput: 266.07 MB/s
+
+Mode: encrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 6.24s
+Throughput: 241.41 MB/s
+
+Mode: decrypt
+Cipher: chacha20
+Digest: sha512
+FileBuffer: 1 Gb
+AuthBuffer: 1 Mb
+Elapsed: 8.13s
+Throughput: 244.38 MB/s
+
