@@ -212,7 +212,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    uint64_t remainingBytes = fileSize;
+    uint64_t remainingBytes = EVP_MAX_KEY_LENGTH;
     uint64_t bytesRead = 0;
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
