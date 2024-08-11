@@ -91,7 +91,11 @@ int workThread(char action, struct dataStruct *st)
                 exit(EXIT_FAILURE);
             }
 
-            genKeyFileHash(keyFile, EVP_MAX_KEY_LENGTH, st);
+			if(st->optSt.keyFromStdin) {
+				genKeyFileHash(keyFile,(uint64_t)~0,st);
+			} else {
+				genKeyFileHash(keyFile, getFileSize(st->fileNameSt.keyFileName), st);
+			}
             fclose(keyFile);
 
             HKDFKeyFile(st);
@@ -101,7 +105,12 @@ int workThread(char action, struct dataStruct *st)
             *(st->guiSt.overallProgressFraction) = .2;
             #endif
 
-            genKeyFileHash(keyFile, EVP_MAX_KEY_LENGTH, st);
+            if(st->optSt.keyFromStdin) {
+				genKeyFileHash(keyFile,(uint64_t)~0,st);
+			} else {
+				genKeyFileHash(keyFile, getFileSize(st->fileNameSt.keyFileName), st);
+			}
+            fclose(keyFile);
             fclose(keyFile);
 
             #ifdef gui

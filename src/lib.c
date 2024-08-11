@@ -714,6 +714,10 @@ void parseOptions(
         fprintf(stderr, "Cannot read both input file and keyfile from standard input. Must choose only one, or use a FIFO.\n");
         errflg++;
     }
+    if (st->optSt.decrypt && st->optSt.readFromStdin) {
+        fprintf(stderr, "This program cannot decrypt from standard input, sorry.\n");
+        errflg++;
+    }
     
     for (int i = 1; i < argc; i++) {
         OPENSSL_cleanse(argv[i], strlen(argv[i]));

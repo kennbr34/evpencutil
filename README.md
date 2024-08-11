@@ -51,7 +51,9 @@ The progrm also makes use of HKDF to derive separate keys from the key derived f
 
 Other cryptographic considerations made are the use of HMAC to create a keyed-hash for password verification. In many cryptographic applications, a small amount of known-plaintext is inserted in the cipher-text so that a successful decryption can be detected. However, this also breaks the abiliity of the program to refuse to decrypt any cipher-text which doesn't pass authenticity. Another approach is to simply rely on the authenticity check with HMAC, since an incorrect password would derive an incorrect key, and thus authenticity could not be confirmed. However, that approach makes it impossible to differentiate between an incorrect password, and a unauthentic cipher-text, so HMAC is used separately on the password itself and the resulting keyed hash is attached to the file along with the Messge Authentication Code.
 
-Other technical considerations include buffered input/output, with user-defined buffer sizes. The program can measure its own data throughput for the user to tweak these settings to the most optimal, but they default to 1 MB. Both the file encryption/decryption is able to be buffered, as well as the authenticity check on the ciphertext. Lastly, the scrypt work factors are able to be specificed, as well as other message digest algorithms. Though scrypt itself will use its own hash function, HMAC and HKDF will use the user-defined digest algorithm. There were many other options that could have been user-configurable, for example the salt size, but these were kept to defaults so as to not over-complicate the interface. Accompanying the user-specified options is a header containing those choices, so that the user does not need to remember what they specified upon decryption.
+Other miscellaneous technical considerations include buffered input/output, with user-defined buffer sizes. The program can measure its own data throughput for the user to tweak these settings to the most optimal, but they default to 1 MB. Both the file encryption/decryption is able to be buffered, as well as the authenticity check on the ciphertext. Lastly, the scrypt work factors are able to be specificed, as well as other message digest algorithms. Though scrypt itself will use its own hash function, HMAC and HKDF will use the user-defined digest algorithm. There were many other options that could have been user-configurable, for example the salt size, but these were kept to defaults so as to not over-complicate the interface. Accompanying the user-specified options is a header containing those choices, so that the user does not need to remember what they specified upon decryption.
+
+The program's ability to process standard input and standard output is a little bit limited. Because to generate the Message Authentication Code in Encrypt-then-MAC requires the ciphter-text to be generated first, it's not possiible to go backwards in the stream if it's opened to standard output so it must be appended at the end of the file. That also means that if a file is to be decoded from standard input, it would have to be able to seek to the end of the file to copy in the MAC first, and then check for authenticity. I am not really sure how to get around this, but it would probably require a pretty dramatic redesign.
 
 Finally, the GUI is also able to be driven via the command-line options. This was done mostly for testing purposes, so that various options and configurations could be tested with both versions of the program.
 
@@ -96,4 +98,17 @@ Perform the same decryption but launch with the GUI instead
 Do the previous but close the GUI upon completion
 
     evpencutil-gui -q -d -i file.enc -o file.plain -p password -k keyfile
+    
+You can encrypt a tarball from standard input
+
+	tar cf - directory | evpencutil-cli -e -i - -o directory.tar.chacha20 -p password -c chacha20
+	
+Or extract it
+
+	evpencutil-cli -e -i directory.tar.chacha20 -o - -p password | tar xf -
+	
+A key generator's output can be read in as the keyfile from stdin
+
+	keygen | evpencutil-cli -e -i file -o file.enc -p password -k -
+	
     

@@ -212,8 +212,8 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    uint64_t remainingBytes = EVP_MAX_KEY_LENGTH;
-    uint64_t bytesRead = 0;
+    uint64_t remainingBytes = fileSize;
+    uint64_t bytesRead = 0, amountReadLast =0;
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
@@ -243,6 +243,16 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
             
             exit(EXIT_FAILURE);
         }
+        
+        amountReadLast = st->miscSt.freadAmt;
+        bytesRead += amountReadLast;
+        
+        if(amountReadLast < st->cryptSt.genAuthBufSize) {
+			remainingBytes = 0;
+			st->cryptSt.genAuthBufSize = amountReadLast;
+		} else {
+			remainingBytes -= st->cryptSt.genAuthBufSize;
+		}
         
         EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
 
