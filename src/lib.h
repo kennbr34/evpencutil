@@ -76,6 +76,7 @@ struct optionsStruct {
     bool writeToStdout;
     bool outputFileGiven;
     bool keyFileGiven;
+    bool keyFromStdin;
     bool passWordGiven;
     bool getPassFromPrompt;
     bool getPassFromArg;

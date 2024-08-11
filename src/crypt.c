@@ -43,13 +43,19 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
     uint64_t bytesWritten = 0, bytesRead = 0, amountReadLast = 0;
     uint64_t remainingBytes = fileSize;
     uint32_t evpOutputLength = 0;
-
+    
+    #ifdef gui
+    st->guiSt.totalTime = 0;
+    #endif
+    
     uint64_t i;
-    uint64_t loopIterations = 0;
     for (i = 0; remainingBytes; i += st->cryptSt.fileBufSize) {
 
         #ifdef gui
-        st->guiSt.startLoop = clock();
+        struct timespec begin, end;
+		clock_gettime(CLOCK_REALTIME, &begin);
+		st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
+		
         st->guiSt.startBytes = bytesWritten;
         #endif
 
@@ -121,23 +127,21 @@ void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *
 
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
+        
+         st->guiSt.endBytes = bytesWritten;
+         st->guiSt.totalBytes = st->guiSt.endBytes;
+        
+        clock_gettime(CLOCK_REALTIME, &end);
+        st->guiSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
 
-        st->guiSt.endLoop = clock();
-        st->guiSt.endBytes = bytesWritten;
+        st->guiSt.loopTime = st->guiSt.endLoop - st->guiSt.startLoop;
+        st->guiSt.totalTime += st->guiSt.loopTime;
 
-        st->guiSt.loopTime = (double)(st->guiSt.endLoop - st->guiSt.startLoop) / CLOCKS_PER_SEC;
-        st->guiSt.totalTime = (double)(st->guiSt.endLoop - st->guiSt.startTime) / CLOCKS_PER_SEC;
-        st->guiSt.totalBytes = st->guiSt.endBytes - st->guiSt.startBytes;
-
-        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.loopTime) / (1024 * 1024);
+        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
         sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", st->optSt.encrypt ? "Encrypting..." : "Decrypting...", dataRate, st->guiSt.totalTime);
-        st->guiSt.averageRate += dataRate;
+        st->guiSt.averageRate = dataRate;
         #endif
-        loopIterations++;
     }
-    #ifdef gui
-    st->guiSt.averageRate /= loopIterations;
-    #endif
 
     if (st->optSt.encrypt) {
         if (!EVP_EncryptFinal_ex(evp_ctx, outBuffer, &evpOutputLength)) {
@@ -209,6 +213,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     uint64_t remainingBytes = fileSize;
+    uint64_t bytesRead = 0;
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
@@ -217,8 +222,11 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
 
         #ifdef gui
-        st->guiSt.startLoop = clock();
-        st->guiSt.startBytes = (fileSize - remainingBytes);
+        struct timespec begin, end;
+		clock_gettime(CLOCK_REALTIME, &begin);
+		st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
+		
+        st->guiSt.startBytes = bytesRead;
         #endif
 
         if (st->cryptSt.genAuthBufSize > remainingBytes) {
@@ -235,20 +243,25 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
             
             exit(EXIT_FAILURE);
         }
+        
         EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
 
+		bytesRead += st->cryptSt.genAuthBufSize;
         remainingBytes -= st->cryptSt.genAuthBufSize;
+        
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
+        
+         st->guiSt.endBytes = bytesRead;
+         st->guiSt.totalBytes = st->guiSt.endBytes;
+        
+        clock_gettime(CLOCK_REALTIME, &end);
+        st->guiSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
 
-        st->guiSt.endLoop = clock();
-        st->guiSt.endBytes = (fileSize - remainingBytes);
+        st->guiSt.loopTime = st->guiSt.endLoop - st->guiSt.startLoop;
+        st->guiSt.totalTime += st->guiSt.loopTime;
 
-        st->guiSt.loopTime = (double)(st->guiSt.endLoop - st->guiSt.startLoop) / CLOCKS_PER_SEC;
-        st->guiSt.totalTime = (double)(st->guiSt.endLoop - st->guiSt.startTime) / CLOCKS_PER_SEC;
-        st->guiSt.totalBytes = st->guiSt.endBytes - st->guiSt.startBytes;
-
-        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.loopTime) / (1024 * 1024);
+        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
         sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Hashing keyfile...", dataRate, st->guiSt.totalTime);
         #endif
     }
@@ -272,6 +285,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     uint64_t remainingBytes = fileSize;
+    uint64_t bytesRead = 0;
 
     HMAC_CTX *ctx = HMAC_CTX_new();
     HMAC_Init_ex(ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
@@ -280,8 +294,11 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
 
         #ifdef gui
-        st->guiSt.startLoop = clock();
-        st->guiSt.startBytes = (fileSize - remainingBytes);
+        struct timespec begin, end;
+		clock_gettime(CLOCK_REALTIME, &begin);
+		st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
+		
+        st->guiSt.startBytes = bytesRead;
         #endif
 
         if (st->cryptSt.genAuthBufSize > remainingBytes) {
@@ -295,18 +312,21 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         }
         HMAC_Update(ctx, genAuthBuffer, sizeof(*genAuthBuffer) * st->cryptSt.genAuthBufSize);
 
+		bytesRead += st->cryptSt.genAuthBufSize;
         remainingBytes -= st->cryptSt.genAuthBufSize;
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
+        
+         st->guiSt.endBytes = bytesRead;
+         st->guiSt.totalBytes = st->guiSt.endBytes;
+        
+        clock_gettime(CLOCK_REALTIME, &end);
+        st->guiSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
 
-        st->guiSt.endLoop = clock();
-        st->guiSt.endBytes = (fileSize - remainingBytes);
+        st->guiSt.loopTime = st->guiSt.endLoop - st->guiSt.startLoop;
+        st->guiSt.totalTime += st->guiSt.loopTime;
 
-        st->guiSt.loopTime = (double)(st->guiSt.endLoop - st->guiSt.startLoop) / CLOCKS_PER_SEC;
-        st->guiSt.totalTime = (double)(st->guiSt.endLoop - st->guiSt.startTime) / CLOCKS_PER_SEC;
-        st->guiSt.totalBytes = st->guiSt.endBytes - st->guiSt.startBytes;
-
-        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.loopTime) / (1024 * 1024);
+        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
         sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Authenticating data...", dataRate, st->guiSt.totalTime);
         #endif
     }

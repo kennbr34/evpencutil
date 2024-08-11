@@ -504,7 +504,12 @@ void parseOptions(
                 fprintf(stderr, "Option -k requires an argument\n");
                 errflg++;
                 break;
-            } else {
+            } else if (optarg[0] == '-') {
+				st->optSt.keyFileGiven = true;
+				st->fileNameSt.keyFileName = strdup("stdin");
+				
+				st->optSt.keyFromStdin = true;
+			} else {
                 st->optSt.keyFileGiven = true;
                 st->fileNameSt.keyFileName = strdup(optarg);
             }

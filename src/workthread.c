@@ -40,7 +40,9 @@ int workThread(char action, struct dataStruct *st)
     uint64_t fileSize = 0;
 
     #ifdef gui
-    st->guiSt.startTime = clock();
+    struct timespec begin, end;
+	clock_gettime(CLOCK_REALTIME, &begin);
+    st->guiSt.startTime = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
     #endif
 
     if (action == 'e') {
@@ -69,14 +71,19 @@ int workThread(char action, struct dataStruct *st)
         }
     }
 
-    if (st->optSt.keyFileGiven) {
-
-        FILE *keyFile = fopen(st->fileNameSt.keyFileName, "rb");
-        if (keyFile == NULL) {
-            PRINT_FILE_ERROR(st->fileNameSt.keyFileName, errno);
-            remove(st->fileNameSt.outputFileName);
-            exit(EXIT_FAILURE);
-        }
+    if (st->optSt.keyFileGiven) {        
+        FILE *keyFile = NULL;
+    
+	    if(st->optSt.keyFromStdin) {
+			keyFile = stdin;
+		} else {    
+		    keyFile = fopen(st->fileNameSt.keyFileName, "rb");
+		    if (keyFile == NULL) {
+	            PRINT_FILE_ERROR(st->fileNameSt.keyFileName, errno);
+	            remove(st->fileNameSt.outputFileName);
+	            exit(EXIT_FAILURE);
+	        }
+		}
 
         if (!st->optSt.passWordGiven) {
             if (freadWErrCheck(st->cryptSt.evpKey, sizeof(*st->cryptSt.evpKey), EVP_MAX_KEY_LENGTH, keyFile, st) != 0) {
