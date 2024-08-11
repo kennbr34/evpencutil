@@ -40,7 +40,7 @@ int workThread(char action, struct dataStruct *st)
     uint64_t fileSize = 0;
 
     #ifdef gui
-    struct timespec begin, end;
+    struct timespec begin;
 	clock_gettime(CLOCK_REALTIME, &begin);
     st->guiSt.startTime = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
     #endif

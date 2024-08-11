@@ -710,6 +710,10 @@ void parseOptions(
         fprintf(stderr, "Supply the password either via prompt or via arg, not both\n");
         errflg++;
     }
+    if (st->optSt.readFromStdin && st->optSt.keyFromStdin) {
+        fprintf(stderr, "Cannot read both input file and keyfile from standard input. Must choose only one, or use a FIFO.\n");
+        errflg++;
+    }
     
     for (int i = 1; i < argc; i++) {
         OPENSSL_cleanse(argv[i], strlen(argv[i]));
