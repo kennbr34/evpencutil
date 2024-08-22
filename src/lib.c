@@ -10,6 +10,56 @@
 
 extern struct cryptoStruct *cryptStGlobal;
 
+uint8_t isSupportedCipher(uint8_t *cipher) {
+    if (strstr(cipher, "aes-128-cbc-hmac-sha1") ||
+        strstr(cipher, "aes-128-cbc-hmac-sha256") ||
+        strstr(cipher, "aes-128-ccm") ||
+        strstr(cipher, "aes-128-gcm") ||
+        strstr(cipher, "aes-128-ocb") ||
+        strstr(cipher, "aes128-wrap") ||
+        strstr(cipher, "aes-128-xts") ||
+        strstr(cipher, "aes-192-ccm") ||
+        strstr(cipher, "aes-192-gcm") ||
+        strstr(cipher, "aes-192-ocb") ||
+        strstr(cipher, "aes192-wrap") ||
+        strstr(cipher, "aes-256-cbc-hmac-sha1") ||
+        strstr(cipher, "aes-256-cbc-hmac-sha256") ||
+        strstr(cipher, "aes-256-ccm") ||
+        strstr(cipher, "aes-256-gcm") ||
+        strstr(cipher, "aes-256-ocb") ||
+        strstr(cipher, "aes256-wrap") ||
+        strstr(cipher, "aes-256-xts") ||
+        strstr(cipher, "aria-128-ccm") ||
+        strstr(cipher, "aria-128-gcm") ||
+        strstr(cipher, "aria-192-ccm") ||
+        strstr(cipher, "aria-192-gcm") ||
+        strstr(cipher, "aria-256-ccm") ||
+        strstr(cipher, "aria-256-gcm") ||
+        strstr(cipher, "des3-wrap") ||
+        strstr(cipher, "id-aes128-CCM") ||
+        strstr(cipher, "id-aes128-GCM") ||
+        strstr(cipher, "id-aes128-wrap") ||
+        strstr(cipher, "id-aes128-wrap-pad") ||
+        strstr(cipher, "id-aes192-CCM") ||
+        strstr(cipher, "id-aes192-GCM") ||
+        strstr(cipher, "id-aes192-wrap") ||
+        strstr(cipher, "id-aes192-wrap-pad") ||
+        strstr(cipher, "id-aes256-CCM") ||
+        strstr(cipher, "id-aes256-GCM") ||
+        strstr(cipher, "id-aes256-wrap") ||
+        strstr(cipher, "id-aes256-wrap-pad") ||
+        strstr(cipher, "idea") ||
+        strstr(cipher, "idea-cbc") ||
+        strstr(cipher, "idea-cfb") ||
+        strstr(cipher, "idea-ecb") ||
+        strstr(cipher, "idea-ofb") ||
+        strstr(cipher, "id-smime-alg-CMS3DESwrap")) {
+            return 0;
+        } else {
+            return 1;
+        }
+}
+
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
     int expectedRetVal = 0;
@@ -168,16 +218,7 @@ void cleanUpBuffers(void)
     free(cryptStGlobal);
 }
 
-/*parseCryptoHeader should be done before forking into the workThread so that the GtkComboBoxes
- * can be updated with the correct information*/
-void parseCryptoHeader(struct dataStruct *st) {
-    FILE *inFile = fopen(st->fileNameSt.inputFileName, "rb");
-    if (inFile == NULL) {
-        PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
-        remove(st->fileNameSt.outputFileName);
-        exit(EXIT_FAILURE);
-    }
-    
+FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st) {
     /*Read cryptoHeader from head of cipher-text or fail if malformed*/
     if (freadWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, inFile, st) != 0) {
         PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -185,7 +226,6 @@ void parseCryptoHeader(struct dataStruct *st) {
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    
     if(strcmp(st->cryptoHeader.evpEncUtilString,"evpencutil") != 0) {
         PRINT_ERROR("Not a file produced with evpencutil, exiting");
         remove(st->fileNameSt.outputFileName);
@@ -248,9 +288,9 @@ void parseCryptoHeader(struct dataStruct *st) {
     gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.nFactorSpinButtonAdj), (gdouble)st->cryptSt.nFactor);
     gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.rFactorSpinButtonAdj), (gdouble)st->cryptSt.rFactor);
     gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.pFactorSpinButtonAdj), (gdouble)st->cryptSt.pFactor);
-    #endif 
+    #endif
     
-    fclose(inFile);
+    return st->miscSt.inFile;
 }
 
 uint8_t printSyntax(char *arg)
@@ -652,6 +692,9 @@ void parseOptions(
                 if (!st->cryptSt.evpCipher) {
                     fprintf(stderr, "Could not load cipher: %s\n", st->cryptSt.encAlgorithm);
                     exit(EXIT_FAILURE);
+                } else if (!isSupportedCipher(st->cryptSt.encAlgorithm)) {
+                    fprintf(stderr, "Cipher not supported: %s\n", st->cryptSt.encAlgorithm);
+                    exit(EXIT_FAILURE);
                 }
 
                 st->optSt.encAlgorithmGiven = true;
@@ -710,12 +753,9 @@ void parseOptions(
         fprintf(stderr, "Supply the password either via prompt or via arg, not both\n");
         errflg++;
     }
+    
     if (st->optSt.readFromStdin && st->optSt.keyFromStdin) {
         fprintf(stderr, "Cannot read both input file and keyfile from standard input. Must choose only one, or use a FIFO.\n");
-        errflg++;
-    }
-    if (st->optSt.decrypt && st->optSt.readFromStdin) {
-        fprintf(stderr, "This program cannot decrypt from standard input, sorry.\n");
         errflg++;
     }
     
