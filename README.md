@@ -56,7 +56,7 @@ Other miscellaneous technical considerations include buffered input/output, with
 The buffered input/output also allows to place MACs incrementally throughout the file, which will allow the ability to process data through standard input and output and still maintain an Encrypt-then-MAC form of authentication. Otherwise, if a single MAC was used for the entire cipher-text, the need to seek to the end to read it, then seek backwards to check the ciphter-text against it would not be possible with piped data. That would prevent being able to do something like pipe the output of 'tar' into the program in order to make an an encrypted tarball. The buffer size will also dictate the amount of data between MACs, and each MAC will be computed on not only the ciphter-text and associated data, but also the number that its corresponding block of data is so that the sequence of data-blocks must remain the same as when encrypted as well.
 
 The data structure of a file encrypted with this program will be as so:
-
+```
 |                     "evpencutil" string                            |
 |                EVP cipher algorithm string                         |
 |                EVP digest algorithm string                         |
@@ -71,7 +71,7 @@ The data structure of a file encrypted with this program will be as so:
 |         (buffer-size % plain-text-file-size) amount of ciphter-text|
 |MAC with EVP_MD_MAX_LENGTH-MAC-length bytes of padding              |
 |                  ________________                                  |
-
+```
 Each MAC is computed against the "evpencutil" string, algorithm strings, salt, scrypt work integers, buffer-size and password's keyed-hash. Plus, every buffer-sized chunk of cipher-text to be computed will also be counted and numbered with its spot in the sequence, which will also be computed in the MAC so an attacker cannot switch the order of blocks in the ciphter-text and produce a decrypted file with that same sequence. This will produce n * ((buffer-size/plain-text-file-size) * EVP_MD_MAX_LENGTH) amount of bytes in overhead, but this is neglibible unless encrypting very large amounts of data with very small buffer sizes. With defaults, it will essentially be EVP_MD_MAX_LENGTH bytes per megabyte of plaintext.
 
 This will mean that every n amount of bytes equal to the buffer-size will be ciphter-text, followed by a MAC that is computed against that ciphter-text, the associated data 
