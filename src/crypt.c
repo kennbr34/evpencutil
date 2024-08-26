@@ -22,6 +22,8 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     uint32_t evpOutputLength = 0;
     
     uint64_t loopIterations = 0;
+    
+    uint8_t isLastChunk = 0;
 
     uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
     if (inBuffer == NULL || outBuffer == NULL) {
@@ -79,6 +81,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         
         if(amountReadLast < st->cryptSt.fileBufSize) {
             remainingBytes = 0;
+            isLastChunk = 1;
             st->cryptSt.fileBufSize = amountReadLast;
         } else {
             remainingBytes -= st->cryptSt.fileBufSize;
@@ -100,7 +103,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         memcpy(hmacBuffer, &st->cryptoHeader, sizeof(st->cryptoHeader));
         memcpy(hmacBuffer + sizeof(st->cryptoHeader), st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
         memcpy(hmacBuffer + sizeof(st->cryptoHeader) + sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE, outBuffer, sizeof(*outBuffer) * st->cryptSt.fileBufSize);
-        memcpy(hmacBuffer + sizeof(st->cryptoHeader) + sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE + sizeof(loopIterations), &loopIterations, sizeof(loopIterations));
+        memcpy(hmacBuffer + sizeof(st->cryptoHeader) + sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE + sizeof(isLastChunk), &isLastChunk, sizeof(isLastChunk));
         
         
         if (HMAC(EVP_get_digestbyname(st->cryptSt.mdAlgorithm), st->cryptSt.hmacKey, EVP_MAX_KEY_LENGTH, outBuffer, sizeof(*outBuffer) * st->cryptSt.fileBufSize, st->cryptSt.generatedMAC, &HMACLengthPtr) == NULL) {
@@ -139,7 +142,21 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 exit(EXIT_FAILURE);
             }
             bytesWritten += HMACLengthPtr;
+            
+            if (fwriteWErrCheck(&isLastChunk, sizeof(isLastChunk), 1, outFile, st) != 0) {
+                PRINT_SYS_ERROR(st->miscSt.returnVal);
+                PRINT_ERROR("Could not write lastChunk bool");
+                remove(st->fileNameSt.outputFileName);
+                exit(EXIT_FAILURE);
+            }
+            
+            bytesWritten += sizeof(isLastChunk);
         }
+        
+        /* Generate a new HMAC key dependent on the cipher-text that will be used to compute the MAC
+         * for the next chunk */
+         
+        genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
         
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;
@@ -204,6 +221,15 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         }
         
         bytesWritten += HMACLengthPtr;
+        
+        if (fwriteWErrCheck(&isLastChunk, sizeof(isLastChunk), 1, outFile, st) != 0) {
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not write remainingBytes");
+            remove(st->fileNameSt.outputFileName);
+            exit(EXIT_FAILURE);
+        }
+        
+        bytesWritten += sizeof(isLastChunk);
     }
     
     OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
@@ -225,8 +251,10 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     uint32_t evpOutputLength = 0;
     
     uint64_t loopIterations = 0;
+    
+    uint8_t isLastChunk = 0;
 
-    uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH + EVP_MAX_MD_SIZE, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
+    uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH + EVP_MAX_MD_SIZE + sizeof(isLastChunk), sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
     if (inBuffer == NULL || outBuffer == NULL) {
         PRINT_SYS_ERROR(errno);
         PRINT_ERROR("Could not allocate memory for doCrypt buffers");
@@ -270,7 +298,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             st->cryptSt.fileBufSize = remainingBytes;
         }
 
-        if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE, inFile, st) != 0) {
+        if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE + sizeof(isLastChunk), inFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not read file for encryption/decryption");
             OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
@@ -279,23 +307,29 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             exit(EXIT_FAILURE);
         }
         
-        memcpy(st->cryptSt.fileMAC,inBuffer + (sizeof(*inBuffer) * st->cryptSt.fileBufSize), EVP_MAX_MD_SIZE);
-        
         amountReadLast = st->miscSt.freadAmt;
         bytesRead += amountReadLast;
         
-        if(amountReadLast < (st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE)) {
+        if(amountReadLast < (st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE + sizeof(isLastChunk))) {
             remainingBytes = 0;
-            st->cryptSt.fileBufSize = amountReadLast - EVP_MAX_MD_SIZE;
+            
+            uint32_t cipherTextEnd = amountReadLast - (EVP_MAX_MD_SIZE + sizeof(isLastChunk));
+            
+            st->cryptSt.fileBufSize = amountReadLast - (EVP_MAX_MD_SIZE + sizeof(isLastChunk));
+            
+            memcpy(st->cryptSt.fileMAC,inBuffer + cipherTextEnd, EVP_MAX_MD_SIZE);
+            memcpy(&isLastChunk,inBuffer + cipherTextEnd + EVP_MAX_MD_SIZE, sizeof(isLastChunk));
         } else {
-            remainingBytes -= (st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE);
+            remainingBytes -= (st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE + sizeof(isLastChunk));
+            
+            memcpy(st->cryptSt.fileMAC,inBuffer + st->cryptSt.fileBufSize, EVP_MAX_MD_SIZE);
+            memcpy(&isLastChunk,inBuffer + st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE, sizeof(isLastChunk));
         }
         
-        if(remainingBytes) {
             memcpy(hmacBuffer, &st->cryptoHeader, sizeof(st->cryptoHeader));
             memcpy(hmacBuffer + sizeof(st->cryptoHeader), st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
             memcpy(hmacBuffer + sizeof(st->cryptoHeader) + sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE, inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize);
-            memcpy(hmacBuffer + sizeof(st->cryptoHeader) + sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE + sizeof(loopIterations), &loopIterations, sizeof(loopIterations));
+            memcpy(hmacBuffer + sizeof(st->cryptoHeader) + sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE + sizeof(isLastChunk), &isLastChunk, sizeof(isLastChunk));
             
             if (HMAC(EVP_get_digestbyname(st->cryptSt.mdAlgorithm), st->cryptSt.hmacKey, EVP_MAX_KEY_LENGTH, inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize, st->cryptSt.generatedMAC, &HMACLengthPtr) == NULL) {
                 PRINT_ERROR("signCipherText HMAC failure");
@@ -303,6 +337,9 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             }
             
             if (CRYPTO_memcmp(st->cryptSt.fileMAC, st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC) * EVP_MAX_MD_SIZE) != 0) {
+                if(!remainingBytes && isLastChunk != 1) {
+                    printf("Message truncated\n");
+                }
                 printf("Message authentication failed\n");
                 #ifdef gui
                 strcpy(st->guiSt.statusMessage, "Authentication failure");
@@ -310,7 +347,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
-        }
         
         if (!EVP_DecryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
             fprintf(stderr, "EVP_DecryptUpdate failed\n");
@@ -337,6 +373,11 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             exit(EXIT_FAILURE);
         }
         bytesWritten += evpOutputLength;
+        
+        /* Generate a new HMAC key dependent on the cipher-text that will be used to compute the MAC
+         * for the next chunk */
+         
+        genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
         
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;
@@ -386,7 +427,11 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             exit(EXIT_FAILURE);
         }
     }
-        
+    
+    if(!isLastChunk) {
+        printf("File may be truncated\n");
+    }
+    
     OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
     OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
@@ -541,7 +586,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     free(genAuthBuffer);
 }
 
-void genHMACKey(struct dataStruct *st)
+void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize)
 {
 
     #ifdef gui
@@ -581,6 +626,11 @@ void genHMACKey(struct dataStruct *st)
         ERR_print_errors_fp(stderr);
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_CTX_add1_hkdf_info(pctx, lastChunk, chunkSize) <= 0) {
+        PRINT_ERROR("HKDF failed\n");
+        ERR_print_errors_fp(stderr);
+        remove(st->fileNameSt.outputFileName);
     }
     if (EVP_PKEY_derive(pctx, st->cryptSt.hmacKey, &outlen) <= 0) {
         PRINT_ERROR("HKDF failed\n");
