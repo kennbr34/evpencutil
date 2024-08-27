@@ -42,8 +42,8 @@ struct cryptoStruct {
     size_t pFactor;
     size_t rFactor;
     
-    uint8_t generatedMAC[MAC_SIZE];
-    uint8_t fileMAC[MAC_SIZE];
+    uint8_t generatedMAC[EVP_MAX_MD_SIZE];
+    uint8_t fileMAC[EVP_MAX_MD_SIZE];
     uint8_t *hmacKey;
     uint32_t *HMACLengthPtr;
     
@@ -96,6 +96,7 @@ struct optionsStruct {
 struct miscStruct {
     uint64_t returnVal;
     uint64_t freadAmt;
+    FILE *inFile;
 };
 
 #ifdef gui
@@ -162,6 +163,7 @@ struct headerStruct {
     char algorithmString[ALGORITHM_STRING_SIZE];
     uint8_t evpSalt[EVP_SALT_SIZE];
     uint32_t scryptWorkFactors[3];
+    size_t fileBufSize;
 };
 
 struct dataStruct {
@@ -190,13 +192,15 @@ struct dataStruct {
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
     }
 
+uint8_t isSupportedCipher(uint8_t *cipher);
 void allocateBuffers(struct dataStruct *st);
 void cleanUpBuffers(void);
-void doCrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);
+void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);
+void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
 uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
 void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st);
-void genHMACKey(struct dataStruct *st);
+void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize);
 void genPassTag(struct dataStruct *st);
 void genEvpSalt(struct dataStruct *st);
 void genEvpKey(struct dataStruct *st);
@@ -214,4 +218,4 @@ size_t getBufSizeMultiple(char *value);
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);
 int writeBenchmark(double time, double rate, struct dataStruct *st);
-void parseCryptoHeader(struct dataStruct *st);
+FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st);

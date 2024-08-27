@@ -19,12 +19,7 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
     struct dataStruct *st = (struct dataStruct *)arg;
 
     /*Do not list authenticated or wrap modes since they will not work*/
-    if (!strstr(obj->name, "gcm") &&
-        !strstr(obj->name, "GCM") &&
-        !strstr(obj->name, "ccm") &&
-        !strstr(obj->name, "CCM") &&
-        !strstr(obj->name, "ocb") &&
-        !strstr(obj->name, "wrap")) {
+    if (isSupportedCipher((unsigned char *)obj->name)) {
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), obj->name);
     }
 }
@@ -204,7 +199,7 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
             workThread('e', st);
         } else if (strcmp(st->guiSt.encryptOrDecrypt, "decrypt") == 0) {
             strcpy(st->guiSt.statusMessage, "Starting decryption...");
-            parseCryptoHeader(st);
+            //parseCryptoHeader(st);
             workThread('d', st);
         }
     }

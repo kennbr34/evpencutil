@@ -11,19 +11,18 @@ int workThread(char action, struct dataStruct *st)
     pid_t p = fork();
     if (p)
         return 0;
-
+        
     FILE *inFile;
-    
+        
     if(st->optSt.readFromStdin) {
 		inFile = stdin;
-	} else {
-	    inFile = fopen(st->fileNameSt.inputFileName, "rb");
-	    if (inFile == NULL) {
-	        PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
-	        exit(EXIT_FAILURE);
+        } else {
+            inFile = fopen(st->fileNameSt.inputFileName, "rb");
+            if (inFile == NULL) {
+                PRINT_FILE_ERROR(st->fileNameSt.inputFileName, errno);
+                exit(EXIT_FAILURE);
+        }
     }
-	}
-    
     
     FILE *outFile;
     
@@ -54,13 +53,22 @@ int workThread(char action, struct dataStruct *st)
     }
 
     if (action == 'd') {
+        
+        parseCryptoHeader(inFile, st);
+        
+        st->cryptSt.fileBufSize = st->cryptoHeader.fileBufSize;
+        
+        #ifdef gui
+        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.fileBufSizeComboBox), 0, "From File");
+        gtk_combo_box_set_active(GTK_COMBO_BOX(st->guiSt.fileBufSizeComboBox), 0);
+        #endif
+        
         #ifdef gui
         strcpy(st->guiSt.statusMessage, "Reading pass keyed-hash...");
         *(st->guiSt.overallProgressFraction) = .2;
         #endif
         
         /*Skip past cryptoHeader since it was parsed prior to now*/
-        fseek(inFile,sizeof(st->cryptoHeader),SEEK_SET);
         
         /*Get passKeyedHashFromFile*/
         if (freadWErrCheck(st->cryptSt.passKeyedHashFromFile, sizeof(*st->cryptSt.passKeyedHashFromFile), PASS_KEYED_HASH_SIZE, inFile, st) != 0) {
@@ -133,7 +141,7 @@ int workThread(char action, struct dataStruct *st)
     strcpy(st->guiSt.statusMessage, "Generation auth key...");
     *(st->guiSt.overallProgressFraction) = .3;
     #endif
-    genHMACKey(st);
+    genHMACKey(st, NULL, 0);
 
     #ifdef gui
     strcpy(st->guiSt.statusMessage, "Password keyed-hash...");
@@ -161,6 +169,7 @@ int workThread(char action, struct dataStruct *st)
 			fileSize = (uint64_t)~0;
 		} else {
 			fileSize = getFileSize(st->fileNameSt.inputFileName);
+            fileSize = (uint64_t)~0;
 		}
 
         #ifdef gui
@@ -170,11 +179,12 @@ int workThread(char action, struct dataStruct *st)
         
         /*Prepare cryptoHeader*/
         strcpy((char * restrict)st->cryptoHeader.evpEncUtilString, "evpencutil");
-        memcpy(st->cryptoHeader.evpSalt, st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE);
         snprintf(st->cryptoHeader.algorithmString,ALGORITHM_STRING_SIZE,"%s:%s", st->cryptSt.encAlgorithm, st->cryptSt.mdAlgorithm);
+        memcpy(st->cryptoHeader.evpSalt, st->cryptSt.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE);
         st->cryptoHeader.scryptWorkFactors[0] = st->cryptSt.nFactor;
         st->cryptoHeader.scryptWorkFactors[1] = st->cryptSt.rFactor;
         st->cryptoHeader.scryptWorkFactors[2] = st->cryptSt.pFactor;
+        st->cryptoHeader.fileBufSize = st->cryptSt.fileBufSize;
         
         /*Prepend cryptoHeader to head of file*/
         if (fwriteWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, outFile, st) != 0) {
@@ -201,43 +211,14 @@ int workThread(char action, struct dataStruct *st)
         *(st->guiSt.overallProgressFraction) = .7;
         #endif
     } else if (action == 'd') {
-        /*Get filesize, discounting the cryptoHeader and passKeyedHash*/
-        fileSize = getFileSize(st->fileNameSt.inputFileName) - (sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE);
-
-        /*Move file position to the start of the MAC*/
-        fseek(inFile, (fileSize + sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE) - MAC_SIZE, SEEK_SET);
-
-        if (freadWErrCheck(st->cryptSt.fileMAC, sizeof(*st->cryptSt.fileMAC), MAC_SIZE, inFile, st) != 0) {
-            PRINT_SYS_ERROR(st->miscSt.returnVal);
-            PRINT_ERROR("Could not read MAC");
-            remove(st->fileNameSt.outputFileName);
-            exit(EXIT_FAILURE);
-        }
-
-        /*Reset file position to beginning of file*/
-        rewind(inFile);
-
-        #ifdef gui
-        strcpy(st->guiSt.statusMessage, "Authenticating data...");
-        *(st->guiSt.overallProgressFraction) = .7;
-        #endif
-
-        genHMAC(inFile, (fileSize + (sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE)) - MAC_SIZE, st);
-
-        /*Verify MAC*/
-        if (CRYPTO_memcmp(st->cryptSt.fileMAC, st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC) * MAC_SIZE) != 0) {
-            printf("Message authentication failed\n");
-            #ifdef gui
-            strcpy(st->guiSt.statusMessage, "Authentication failure");
-            #endif
-            remove(st->fileNameSt.outputFileName);
-            exit(EXIT_FAILURE);
-        }
-
-        OPENSSL_cleanse(st->cryptSt.hmacKey, sizeof(*st->cryptSt.hmacKey) * HMAC_KEY_SIZE);
-
-        /*Reset file posiiton to beginning of cipher-text after the salt and pass tag*/
-        fseek(inFile, sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE, SEEK_SET);
+        
+        if(st->optSt.readFromStdin) {
+			fileSize = (uint64_t)~0;
+		} else {
+			/*Get filesize, discounting the cryptoHeader and passKeyedHash*/
+            fileSize = getFileSize(st->fileNameSt.inputFileName) - (sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE);
+            fileSize = (uint64_t)~0;
+		}
 
         #ifdef gui
         strcpy(st->guiSt.statusMessage, "Decrypting...");
@@ -246,9 +227,9 @@ int workThread(char action, struct dataStruct *st)
     }
 
     if (action == 'e') {
-        doCrypt(inFile, outFile, fileSize, st);
+        doEncrypt(inFile, outFile, fileSize, st);
     } else if (action == 'd') {
-        doCrypt(inFile, outFile, fileSize - MAC_SIZE, st);
+        doDecrypt(inFile, outFile, fileSize, st);
     }
 
     if (fclose(inFile) != 0) {
@@ -259,17 +240,7 @@ int workThread(char action, struct dataStruct *st)
     }
 
     OPENSSL_cleanse(st->cryptSt.hmacKey, sizeof(*st->cryptSt.hmacKey) * HMAC_KEY_SIZE);
-
-    if (action == 'e') {
-        /*Write the MAC to the end of the file*/
-        if (fwriteWErrCheck(st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC), MAC_SIZE, outFile, st) != 0) {
-            PRINT_SYS_ERROR(st->miscSt.returnVal);
-            PRINT_ERROR("Could not write MAC");
-            remove(st->fileNameSt.outputFileName);
-            exit(EXIT_FAILURE);
-        }
-    }
-
+    
     #ifdef gui
     strcpy(st->guiSt.statusMessage, "Saving file...");
     *(st->guiSt.overallProgressFraction) = .9;
