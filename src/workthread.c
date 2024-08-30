@@ -141,7 +141,7 @@ int workThread(char action, struct dataStruct *st)
     strcpy(st->guiSt.statusMessage, "Generation auth key...");
     *(st->guiSt.overallProgressFraction) = .3;
     #endif
-    genHMACKey(st);
+    genHMACKey(st, NULL, 0);
 
     #ifdef gui
     strcpy(st->guiSt.statusMessage, "Password keyed-hash...");

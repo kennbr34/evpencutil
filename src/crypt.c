@@ -309,8 +309,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 #endif
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
-            }
-        }
+            }        }
         
         if (!EVP_DecryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
             fprintf(stderr, "EVP_DecryptUpdate failed\n");
@@ -370,8 +369,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         exit(EXIT_FAILURE);
     }
 
-    EVP_CIPHER_CTX_free(evp_ctx);
-    
+    EVP_CIPHER_CTX_free(evp_ctx);    
     if(evpOutputLength) {
         
         if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
@@ -541,7 +539,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     free(genAuthBuffer);
 }
 
-void genHMACKey(struct dataStruct *st)
+void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize)
 {
 
     #ifdef gui
@@ -581,6 +579,11 @@ void genHMACKey(struct dataStruct *st)
         ERR_print_errors_fp(stderr);
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_CTX_add1_hkdf_info(pctx, lastChunk, chunkSize) <= 0) {
+        PRINT_ERROR("HKDF failed\n");
+        ERR_print_errors_fp(stderr);
+        remove(st->fileNameSt.outputFileName);
     }
     if (EVP_PKEY_derive(pctx, st->cryptSt.hmacKey, &outlen) <= 0) {
         PRINT_ERROR("HKDF failed\n");

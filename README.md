@@ -56,7 +56,7 @@ Other miscellaneous technical considerations include buffered input/output, with
 The buffered input/output also allows to place MACs incrementally throughout the file, which will allow the ability to process data through standard input and output and still maintain an Encrypt-then-MAC form of authentication. Otherwise, if a single MAC was used for the entire cipher-text, the need to seek to the end to read it, then seek backwards to check the ciphter-text against it would not be possible with piped data. That would prevent being able to do something like pipe the output of 'tar' into the program in order to make an an encrypted tarball. The buffer size will also dictate the amount of data between MACs, and each MAC will be computed on not only the ciphter-text and associated data, but also the number that its corresponding block of data is so that the sequence of data-blocks must remain the same as when encrypted as well.
 
 The data structure of a file encrypted with this program will be as so:
-
+```
 |                     "evpencutil" string                            |
 |                EVP cipher algorithm string                         |
 |                EVP digest algorithm string                         |
