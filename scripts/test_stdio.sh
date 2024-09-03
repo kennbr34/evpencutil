@@ -5,12 +5,12 @@ BINPATH="./bin/evpencutil-cli -w N=1024"
 
 while : ; do
 	FILESIZE=$(echo $RANDOM | cut -b -2)
-	BUFFERS=$(echo $RANDOM | cut -b -2)
+	BUFFERS=`echo $(echo $RANDOM | cut -b -2)k`
 
 	dd if=/dev/urandom of=./testfile bs=1M count=$FILESIZE &> /dev/null
     
-	echo $BINPATH -e -i ./testfile -o ./testfile.enc -p password -b file_buffer=${BUFFERS}m
-	$BINPATH -e -i ./testfile -o ./testfile.enc -p password -b file_buffer=${BUFFERS}m
+	echo $BINPATH -e -i ./testfile -o ./testfile.enc -p password -b file_buffer=${BUFFERS}
+	$BINPATH -e -i ./testfile -o ./testfile.enc -p password -b file_buffer=${BUFFERS}
     
 	echo $BINPATH -d -i ./testfile.enc -o ./testfile.plain -p password
 	$BINPATH -d -i ./testfile.enc -o ./testfile.plain -p password
@@ -24,8 +24,8 @@ while : ; do
 	#echo cmp ./testfile ./testfile.plain
 	cmp ./testfile ./testfile.plain
     
-	echo "$BINPATH -e -i ./testfile -o - -p password -b file_buffer=${BUFFERS}m -c bf-ofb | $BINPATH -e -i - -o - -p password -c aes-256-cbc -b file_buffer=${BUFFERS}m | $BINPATH -e -i - -o ./testfile.enc -p password -b file_buffer=${BUFFERS}m"
-	$BINPATH -e -i ./testfile -o - -p password -b file_buffer=${BUFFERS}m | $BINPATH -e -i - -o - -p password  -b file_buffer=${BUFFERS}m | $BINPATH -e -i - -o ./testfile.enc -p password -b file_buffer=${BUFFERS}m
+	echo "$BINPATH -e -i ./testfile -o - -p password -b file_buffer=${BUFFERS} -c bf-ofb | $BINPATH -e -i - -o - -p password -c aes-256-cbc -b file_buffer=${BUFFERS} | $BINPATH -e -i - -o ./testfile.enc -p password -b file_buffer=${BUFFERS}"
+	$BINPATH -e -i ./testfile -o - -p password -b file_buffer=${BUFFERS} | $BINPATH -e -i - -o - -p password  -b file_buffer=${BUFFERS} | $BINPATH -e -i - -o ./testfile.enc -p password -b file_buffer=${BUFFERS}
     
 	echo "$BINPATH -d -i ./testfile.enc -o - -p password | $BINPATH -d -i - -o - -p password | $BINPATH -d -i - -o ./testfile.plain -p password"
 	$BINPATH -d -i ./testfile.enc -o - -p password | $BINPATH -d -i - -o - -p password | $BINPATH -d -i - -o ./testfile.plain -p password

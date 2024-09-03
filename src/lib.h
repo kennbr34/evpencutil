@@ -199,6 +199,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
 uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st);
+void genChunkKey(struct dataStruct *st);
 void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st);
 void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize);
 void genPassTag(struct dataStruct *st);

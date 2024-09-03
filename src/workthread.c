@@ -141,7 +141,7 @@ int workThread(char action, struct dataStruct *st)
     strcpy(st->guiSt.statusMessage, "Generation auth key...");
     *(st->guiSt.overallProgressFraction) = .3;
     #endif
-    genHMACKey(st, NULL, 0);
+    genHMACKey(st, st->cryptSt.generatedMAC, HMAC_KEY_SIZE);
 
     #ifdef gui
     strcpy(st->guiSt.statusMessage, "Password keyed-hash...");
@@ -169,7 +169,6 @@ int workThread(char action, struct dataStruct *st)
 			fileSize = (uint64_t)~0;
 		} else {
 			fileSize = getFileSize(st->fileNameSt.inputFileName);
-            fileSize = (uint64_t)~0;
 		}
 
         #ifdef gui
@@ -217,7 +216,6 @@ int workThread(char action, struct dataStruct *st)
 		} else {
 			/*Get filesize, discounting the cryptoHeader and passKeyedHash*/
             fileSize = getFileSize(st->fileNameSt.inputFileName) - (sizeof(st->cryptoHeader) + PASS_KEYED_HASH_SIZE);
-            fileSize = (uint64_t)~0;
 		}
 
         #ifdef gui

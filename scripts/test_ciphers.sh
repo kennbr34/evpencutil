@@ -1,14 +1,19 @@
 #!/bin/bash
 
-BINPATH='./bin/evpencutil-cli -w N=1024'
-COUNT=$(echo $RANDOM | cut -b 1)
+BUFFER=`echo $(echo $RANDOM)k`
+COUNT=$(echo $RANDOM | cut -b -2)
+BINPATH="./bin/evpencutil-cli -w N=1024 -b file_buffer=$BUFFER"
+
+echo "Testing with $COUNT megabytes and $BUFFER buffer"
 
 cat $1 | while read cipher ; do
+
+	echo "Testing "$cipher""
 
 	dd if=/dev/urandom of=./testfile bs=1M count=$COUNT &> /dev/null
 	$BINPATH -e -i ./testfile -o ./testfile.enc -p password -c "$cipher"
 	if [ $? != 0 ] ; then
-		#echo ""$cipher" does not work"
+		echo ""$cipher" does not work"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 		continue
 	fi
@@ -22,10 +27,12 @@ cat $1 | while read cipher ; do
 
 	cmp ./testfile ./testfile.plain &> /dev/null
 	if [ $? != 0 ] ; then
-		echo ""$cipher" does not work"
+		#echo ""$cipher" does not work"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 		continue
 	fi
+
+	echo ""$cipher" works"
 
 	rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 done

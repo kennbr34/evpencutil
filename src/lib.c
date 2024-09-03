@@ -55,6 +55,8 @@ uint8_t isSupportedCipher(uint8_t *cipher) {
         strstr(cipher, "idea-ofb") ||
         strstr(cipher, "id-smime-alg-CMS3DESwrap")) {
             return 0;
+        } else if(EVP_CIPHER_block_size(EVP_get_cipherbyname(cipher)) > 1) {
+            return 0;
         } else {
             return 1;
         }
@@ -275,6 +277,11 @@ FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st) {
         free(st->cryptSt.mdAlgorithm);
     }
     st->cryptSt.mdAlgorithm = strdup(token);
+    
+    /* Do not forget to make st->cryptoHeader.algorithmString the same format it was when
+     * computed for the MAC */
+    snprintf(st->cryptoHeader.algorithmString, ALGORITHM_STRING_SIZE,"%s:%s",st->cryptSt.encAlgorithm, st->cryptSt.mdAlgorithm);
+    
     #ifdef gui
     gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), 0, st->cryptSt.mdAlgorithm);
     gtk_combo_box_set_active(GTK_COMBO_BOX(st->guiSt.mdAlgorithmComboBox), 0);
