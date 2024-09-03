@@ -1,15 +1,15 @@
-#include <openssl/sha.h>
-#include <openssl/evp.h>
+#include <ctype.h>
+#include <errno.h>
 #include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
-#include <signal.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <ctype.h>
 #ifdef gui
 #include <gtk/gtk.h>
 #endif
@@ -33,28 +33,28 @@ struct cryptoStruct {
     uint8_t *evpKey;
     uint8_t *evpSalt;
     uint8_t *keyFileBuffer;
-    
+
     char userPass[MAX_PASS_SIZE];
     char userPassToVerify[MAX_PASS_SIZE];
     uint8_t passKeyedHash[PASS_KEYED_HASH_SIZE], passKeyedHashFromFile[PASS_KEYED_HASH_SIZE];
-    
+
     size_t nFactor;
     size_t pFactor;
     size_t rFactor;
-    
+
     uint8_t generatedMAC[EVP_MAX_MD_SIZE];
     uint8_t fileMAC[EVP_MAX_MD_SIZE];
     uint8_t *hmacKey;
     uint32_t *HMACLengthPtr;
-    
+
     uint8_t keyFileHash[EVP_MAX_MD_SIZE];
-    
+
     size_t genAuthBufSize;
     size_t fileBufSize;
-    
+
     const EVP_CIPHER *evpCipher;
     const EVP_MD *evpDigest;
-    
+
     char *encAlgorithm;
     char *mdAlgorithm;
 };
@@ -110,23 +110,23 @@ struct guiStruct {
     GtkWidget *keyFileNameBox;
     GtkWidget *passwordBox;
     GtkWidget *passwordVerificationBox;
-    
+
     GtkWidget *nFactorTextBox;
     GtkWidget *rFactorTextBox;
     GtkWidget *pFactorTextBox;
-    
+
     GtkAdjustment *nFactorSpinButtonAdj;
     GtkAdjustment *rFactorSpinButtonAdj;
     GtkAdjustment *pFactorSpinButtonAdj;
-    
+
     GtkWidget *keyFileButton;
-    
+
     GtkWidget *keySizeComboBox;
     GtkWidget *authBufSizeComboBox;
     GtkWidget *fileBufSizeComboBox;
     GtkWidget *encAlgorithmComboBox;
     GtkWidget *mdAlgorithmComboBox;
-    
+
     const char *inputFilePath;
     const char *outputFilePath;
     const char *keyFilePath;
@@ -138,22 +138,22 @@ struct guiStruct {
 
     double *progressFraction;
     char *statusMessage;
-    
+
     GtkWidget *statusBar;
     guint statusContextID;
-    
+
     GtkWidget *overallProgressBar;
     double *overallProgressFraction;
-    
+
     GtkWidget *progressBar;
-    
+
     clock_t startTime, endTime;
     double totalTime;
     uint64_t startBytes, endBytes, totalBytes;
-    
+
     clock_t startLoop, endLoop;
     double loopTime;
-    
+
     double loopRate, averageRate;
 };
 #endif
@@ -171,9 +171,9 @@ struct dataStruct {
     struct fileNames fileNameSt;
     struct optionsStruct optSt;
     struct miscStruct miscSt;
-    #ifdef gui
+#ifdef gui
     struct guiStruct guiSt;
-    #endif
+#endif
     struct headerStruct cryptoHeader;
 };
 
@@ -219,4 +219,4 @@ size_t getBufSizeMultiple(char *value);
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);
 int writeBenchmark(double time, double rate, struct dataStruct *st);
-FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st);
+FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st);

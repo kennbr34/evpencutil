@@ -2,10 +2,10 @@
 #if OPENSSL_VERSION_MAJOR >= 3
 #include <openssl/provider.h>
 #endif
-#include <unistd.h>
+#include "lib.h"
 #include <sys/types.h>
 #include <sys/wait.h>
-#include "lib.h"
+#include <unistd.h>
 
 struct cryptoStruct *cryptStGlobal = NULL;
 
@@ -19,10 +19,10 @@ int main(int argc, char *argv[])
     struct dataStruct st = {0};
     cryptStGlobal = &st.cryptSt;
 
-    #if OPENSSL_VERSION_MAJOR >= 3
+#if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
     OSSL_PROVIDER_load(NULL, "default");
-    #endif
+#endif
 
     OpenSSL_add_all_algorithms();
 
@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
     st.cryptSt.fileBufSize = 1024 * 1024;
 
     parseOptions(argc, argv, &st);
-    
-    if(st.optSt.getPassFromPrompt) {
+
+    if (st.optSt.getPassFromPrompt) {
         getPass("Enter password: ", st.cryptSt.userPass, &st);
-        if(st.optSt.verifyPass) {
+        if (st.optSt.verifyPass) {
             getPass("Verify password: ", st.cryptSt.userPassToVerify, &st);
-            if(strcmp(st.cryptSt.userPass,st.cryptSt.userPassToVerify) != 0) {
+            if (strcmp(st.cryptSt.userPass, st.cryptSt.userPassToVerify) != 0) {
                 printf("Passwords didn't match\n");
                 exit(EXIT_FAILURE);
             }
@@ -58,12 +58,12 @@ int main(int argc, char *argv[])
     } else if (st.optSt.decrypt) {
         workThread('d', &st);
     }
-    
+
     int waitStatus = 0;
 
     wait(&waitStatus);
-    
-    if(WIFEXITED(waitStatus)) {
+
+    if (WIFEXITED(waitStatus)) {
         return WEXITSTATUS(waitStatus);
     } else {
         return EXIT_FAILURE;
