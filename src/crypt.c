@@ -62,6 +62,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         }
         
         EVP_EncryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
+        EVP_CIPHER_CTX_set_padding(evp_ctx,0);
         
         EVP_DigestInit_ex(md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
         
@@ -85,14 +86,28 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         amountReadLast = st->miscSt.freadAmt;
         bytesRead += amountReadLast;
         
+        uint8_t paddingAmount = 0;
+        
         if(amountReadLast < st->cryptSt.fileBufSize) {
             remainingBytes = 0;
             st->cryptSt.fileBufSize = amountReadLast;
+            
+            uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(evp_ctx);
+            
+            if(bytesRead % cipherBlockSize) {
+                paddingAmount = cipherBlockSize - (bytesRead % cipherBlockSize);
+            }
+            
+            uint8_t *paddingArray = calloc(paddingAmount, sizeof(*paddingArray));
+            memset(paddingArray, paddingAmount, sizeof(paddingAmount) * paddingAmount);
+            
+            memcpy(inBuffer + amountReadLast, paddingArray, sizeof(*paddingArray) * paddingAmount);
+            
         } else {
             remainingBytes -= st->cryptSt.fileBufSize;
         }
         
-        if (!EVP_EncryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
+        if (!EVP_EncryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize + paddingAmount)) {
             fprintf(stderr, "EVP_EncryptUpdate failed\n");
             ERR_print_errors_fp(stderr);
             EVP_CIPHER_CTX_cleanup(evp_ctx);
@@ -117,34 +132,24 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             exit(EXIT_FAILURE);
         }
         bytesWritten += evpOutputLength;
-        
+                    
         EVP_DigestUpdate(md_ctx, &st->cryptoHeader, sizeof(st->cryptoHeader));
         EVP_DigestUpdate(md_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
         EVP_DigestUpdate(md_ctx, outBuffer, sizeof(*outBuffer) * evpOutputLength);
+        if(paddingAmount) {
+            st->cryptSt.fileBufSize += paddingAmount;
+        }
         EVP_DigestUpdate(md_ctx, &st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
         
-        /* Do not write MAC if remainingBytes is zero and the cipher is a block cipher, in order
-         * to prevent messing up the padding */
-         
-        uint8_t cipherNeedsPadding = 0;
+        EVP_DigestFinal_ex(md_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr);
         
-        if(bytesWritten % EVP_CIPHER_CTX_block_size(evp_ctx) != 0) {
-            cipherNeedsPadding = 1;
+        if (fwriteWErrCheck(st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC), HMACLengthPtr, outFile, st) != 0) {
+            PRINT_SYS_ERROR(st->miscSt.returnVal);
+            PRINT_ERROR("Could not write MAC");
+            remove(st->fileNameSt.outputFileName);
+            exit(EXIT_FAILURE);
         }
-        
-        if(!cipherNeedsPadding) {
-            
-            EVP_DigestFinal_ex(md_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr);
-            
-            if (fwriteWErrCheck(st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC), HMACLengthPtr, outFile, st) != 0) {
-                PRINT_SYS_ERROR(st->miscSt.returnVal);
-                PRINT_ERROR("Could not write MAC");
-                remove(st->fileNameSt.outputFileName);
-                exit(EXIT_FAILURE);
-            }
-            bytesWritten += HMACLengthPtr;
-        }
-        
+        bytesWritten += HMACLengthPtr;        
         
         genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
         genChunkKey(st);
@@ -166,50 +171,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         st->guiSt.averageRate = dataRate;
         #endif
         loopIterations++;
-    }
-
-    if (!EVP_EncryptFinal_ex(evp_ctx, outBuffer, &evpOutputLength)) {
-        fprintf(stderr, "EVP_EncryptFinal_ex failed\n");
-        ERR_print_errors_fp(stderr);
-        EVP_CIPHER_CTX_cleanup(evp_ctx);
-        
-        OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-        OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-        
-        remove(st->fileNameSt.outputFileName);
-        
-        exit(EXIT_FAILURE);
-    }
-    
-    if(evpOutputLength) {
-        
-        if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
-            PRINT_SYS_ERROR(st->miscSt.returnVal);
-            PRINT_ERROR("Could not write file for encryption/decryption");
-            
-            OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-            OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-            
-            remove(st->fileNameSt.outputFileName);
-            
-            exit(EXIT_FAILURE);
-        }
-           
-        bytesWritten += evpOutputLength;
-                        
-        EVP_DigestUpdate(md_ctx, outBuffer, sizeof(*outBuffer) * evpOutputLength);
-        EVP_DigestUpdate(md_ctx, &bytesWritten, sizeof(bytesWritten));
-        
-        EVP_DigestFinal_ex(md_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr);
-        
-        if (fwriteWErrCheck(st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC), HMACLengthPtr, outFile, st) != 0) {
-            PRINT_SYS_ERROR(st->miscSt.returnVal);
-            PRINT_ERROR("Could not write MAC");
-            remove(st->fileNameSt.outputFileName);
-            exit(EXIT_FAILURE);
-        }
-        
-        bytesWritten += HMACLengthPtr;
     }
     
     EVP_CIPHER_CTX_free(evp_ctx);
@@ -273,6 +234,8 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         }
         
         EVP_DecryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
+        uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(evp_ctx);
+        EVP_CIPHER_CTX_set_padding(evp_ctx,0);
         
         EVP_DigestInit_ex(md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
                 
@@ -325,7 +288,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 exit(EXIT_FAILURE);
             }
         
-        
         if (!EVP_DecryptUpdate(evp_ctx, outBuffer, &evpOutputLength, inBuffer, st->cryptSt.fileBufSize)) {
             fprintf(stderr, "EVP_DecryptUpdate failed\n");
             ERR_print_errors_fp(stderr);
@@ -338,8 +300,15 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
             exit(EXIT_FAILURE);
         }
+        
+        uint8_t paddingAmount = 0;
+        if(remainingBytes == 0) {
+            if(cipherBlockSize > 1) {
+                paddingAmount = outBuffer[evpOutputLength-1];
+            }
+        }
 
-        if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
+        if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength - paddingAmount, outFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not write file for encryption/decryption");
             
@@ -372,37 +341,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         st->guiSt.averageRate = dataRate;
         #endif
         loopIterations++;
-    }
-
-    if (!EVP_DecryptFinal_ex(evp_ctx, outBuffer, &evpOutputLength)) {
-        fprintf(stderr, "EVP_DecryptFinal_ex failed \n");
-        ERR_print_errors_fp(stderr);
-        EVP_CIPHER_CTX_cleanup(evp_ctx);
-        
-        OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-        OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-        
-        remove(st->fileNameSt.outputFileName);
-        
-        exit(EXIT_FAILURE);
-    }
-
-    EVP_CIPHER_CTX_free(evp_ctx);
-    EVP_MD_CTX_free(md_ctx);
-    
-    if(evpOutputLength) {
-        
-        if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
-            PRINT_SYS_ERROR(st->miscSt.returnVal);
-            PRINT_ERROR("Could not write file for encryption/decryption");
-            
-            OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-            OPENSSL_cleanse(outBuffer,sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
-            
-            remove(st->fileNameSt.outputFileName);
-            
-            exit(EXIT_FAILURE);
-        }
     }
     
     OPENSSL_cleanse(inBuffer,sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));

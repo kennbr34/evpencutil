@@ -55,8 +55,6 @@ uint8_t isSupportedCipher(uint8_t *cipher) {
         strstr(cipher, "idea-ofb") ||
         strstr(cipher, "id-smime-alg-CMS3DESwrap")) {
             return 0;
-        } else if(EVP_CIPHER_block_size(EVP_get_cipherbyname(cipher)) > 1) {
-            return 0;
         } else {
             return 1;
         }

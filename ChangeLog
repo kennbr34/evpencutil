@@ -1,3 +1,8 @@
+0.2.1
+
+Fixed a few bugs
+Fixed handling of padded ciphers or ciphers in CBC or ECB mode
+
 0.2.0
 
 Added ability to use standard input and output to program
