@@ -40,9 +40,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         exit(EXIT_FAILURE);
     }
 
-    EVP_CIPHER_CTX *evp_ctx = EVP_CIPHER_CTX_new();
-    EVP_CIPHER_CTX_init(evp_ctx);
-    EVP_EncryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
+    EVP_CIPHER_CTX *evp_ctx = NULL;
     
     EVP_MD_CTX *md_ctx = NULL;
             
@@ -55,10 +53,15 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     while (remainingBytes) {
         
         if(!loopIterations) {
+            evp_ctx = EVP_CIPHER_CTX_new();
+            EVP_CIPHER_CTX_init(evp_ctx);
             md_ctx = EVP_MD_CTX_new();
         } else {
+            EVP_CIPHER_CTX_reset(evp_ctx);
             EVP_MD_CTX_reset(md_ctx);
         }
+        
+        EVP_EncryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
         
         EVP_DigestInit_ex(md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
         
@@ -118,6 +121,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         EVP_DigestUpdate(md_ctx, &st->cryptoHeader, sizeof(st->cryptoHeader));
         EVP_DigestUpdate(md_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
         EVP_DigestUpdate(md_ctx, outBuffer, sizeof(*outBuffer) * evpOutputLength);
+        EVP_DigestUpdate(md_ctx, &st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
         
         /* Do not write MAC if remainingBytes is zero and the cipher is a block cipher, in order
          * to prevent messing up the padding */
@@ -140,7 +144,10 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             }
             bytesWritten += HMACLengthPtr;
         }
-            
+        
+        
+        genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
+        genChunkKey(st);
         
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;
@@ -244,9 +251,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         exit(EXIT_FAILURE);
     }
 
-    EVP_CIPHER_CTX *evp_ctx = EVP_CIPHER_CTX_new();
-    EVP_CIPHER_CTX_init(evp_ctx);
-    EVP_DecryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
+    EVP_CIPHER_CTX *evp_ctx = NULL;
     
     EVP_MD_CTX *md_ctx = NULL;
     
@@ -259,10 +264,15 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     while (remainingBytes) {
         
         if(!loopIterations) {
+            evp_ctx = EVP_CIPHER_CTX_new();
+            EVP_CIPHER_CTX_init(evp_ctx);
             md_ctx = EVP_MD_CTX_new();
         } else {
+            EVP_CIPHER_CTX_reset(evp_ctx);
             EVP_MD_CTX_reset(md_ctx);
         }
+        
+        EVP_DecryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
         
         EVP_DigestInit_ex(md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
                 
@@ -302,6 +312,8 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             EVP_DigestUpdate(md_ctx, &st->cryptoHeader, sizeof(st->cryptoHeader));
             EVP_DigestUpdate(md_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
             EVP_DigestUpdate(md_ctx, inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize);
+            EVP_DigestUpdate(md_ctx, &st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
+            
             EVP_DigestFinal_ex(md_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr);
                         
             if (CRYPTO_memcmp(st->cryptSt.fileMAC, st->cryptSt.generatedMAC, sizeof(*st->cryptSt.generatedMAC) * EVP_MAX_MD_SIZE) != 0) {
@@ -339,6 +351,9 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             exit(EXIT_FAILURE);
         }
         bytesWritten += evpOutputLength;
+        
+        genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
+        genChunkKey(st);
         
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;

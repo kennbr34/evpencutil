@@ -53,7 +53,7 @@ Other considerations made are the use of HMAC to create a keyed-hash for passwor
 
 Other miscellaneous technical considerations include buffered input/output, with user-defined buffer sizes. Both the file encryption/decryption is able to be buffered, as well as the authenticity check on the ciphertext. The program can measure its own data throughput for the user to tweak these settings to the most optimal, but they default to 1 MB. Lastly, the scrypt work factors are able to be specificed, as well as other message digest algorithms. Though scrypt itself will use its own hash function, HMAC and HKDF will use the user-defined digest algorithm. There were many other options that could have been user-configurable, for example the salt size, but these were kept to defaults so as to not over-complicate the interface. Accompanying the user-specified options is a header containing those choices, so that the user does not need to remember what they specified upon decryption.
 
-The buffered input/output also allows to place MACs incrementally throughout the file, which will allow the ability to process data through standard input and output and still maintain an Encrypt-then-MAC form of authentication. Otherwise, if a single MAC was used for the entire cipher-text, the need to seek to the end to read it, then seek backwards to check the ciphter-text against it would not be possible with piped data. That would prevent being able to do something like pipe the output of 'tar' into the program in order to make an an encrypted tarball. The buffer size will also dictate the amount of data between MACs, and each MAC will be computed on not only the ciphter-text and associated data, but also HMAC will compute this MAC with a key derived from HKDF using the previou chunk's HMAC key as an "info" parameter. Finally each chunk and MAC is followed by an 8-bit flag that denotes whether that was the last chunk expected or not. This method is similar to the approach used in Monocypher to enforce chunk sequence, and to detect message truncation.
+The buffered input/output also allows to place MACs incrementally throughout the file, which will allow the ability to process data through standard input and output and still maintain an Encrypt-then-MAC form of authentication. Otherwise, if a single MAC was used for the entire cipher-text, the need to seek to the end to read it, then seek backwards to check the ciphter-text against it would not be possible with piped data. That would prevent being able to do something like pipe the output of 'tar' into the program in order to make an an encrypted tarball. The buffer size will also dictate the amount of data between MACs, and each MAC will be computed on not only the ciphter-text and associated data, but also HMAC will compute this MAC with a key derived from HKDF using the previou chunk's HMAC key as an "info" parameter. Finally, the buffer size as dictated by the amount that was able to be read is also computed as part of the MAC. This method is similar to the approach used in Monocypher to enforce chunk sequence, and to detect message truncation.
 
 The data format of a file encrypted with this program will be as so:
 ```
@@ -67,16 +67,12 @@ The data format of a file encrypted with this program will be as so:
 |                   _______________                                  |_
 |         buffer-size-amount of ciphter-text                         |
 |MAC with EVP_MD_MAX_LENGTH-MAC-length bytes of padding              |(plain-text-file-size / buffer-size) times
-|                   "last chunk" flag as 8-bit integer              |
 |                   _______________                                  |_
 |         (buffer-size % plain-text-file-size) amount of ciphter-text|
 |MAC with EVP_MD_MAX_LENGTH-MAC-length bytes of padding              |
-|                   "last chunk" flat as 8-bit integer"
 |                  ________________                                  |
 ```
-Each MAC is computed against the "evpencutil" string, algorithm strings, salt, scrypt work integers, buffer-size, password's keyed-hash, and the 8-bit flag that denotes the last chunk. This will produce n * ((buffer-size/plain-text-file-size) * EVP_MD_MAX_LENGTH + 1) amount of bytes in overhead, but this is neglibible unless encrypting very large amounts of data with very small buffer sizes. With defaults, it will essentially be EVP_MD_MAX_LENGTH + 1 bytes per megabyte of plaintext.
-
-This will mean that every n amount of bytes equal to the buffer-size will be ciphter-text, followed by a MAC that is computed against that ciphter-text, the associated data 
+Each MAC is computed against the "evpencutil" string, algorithm strings, salt, scrypt work integers, buffer-size, password's keyed-hash, and the buffer-size the time of each chunk-computation. This will produce n * ((buffer-size/plain-text-file-size) * EVP_MD_MAX_LENGTH) amount of bytes in overhead, but this is neglibible unless encrypting very large amounts of data with very small buffer sizes. With defaults, it will essentially be EVP_MD_MAX_LENGTH bytes per megabyte of plaintext.
 
 Finally, the GUI is also able to be driven via the command-line options. This was done mostly for testing purposes, so that various options and configurations could be tested with both versions of the program.
 
