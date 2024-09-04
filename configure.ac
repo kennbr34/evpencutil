@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([EVP-ENC-UTIL], [0.2.0], [kennbr34@gmail.com])
+AC_INIT([EVP-ENC-UTIL], [0.2.1], [kennbr34@gmail.com])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([subdir-objects foreign])
 AC_CONFIG_HEADERS([config.h])
 
-: ${CFLAGS="-g -O4 -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-overlength-strings -Wno-pointer-sign -Wformat-overflow=0 -fsanitize=undefined"}
+: ${CFLAGS="-g -O0 -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-overlength-strings -Wno-pointer-sign -Wformat-overflow=0 -fsanitize=undefined"}
 
 # Checks for programs.
 AC_PROG_CC

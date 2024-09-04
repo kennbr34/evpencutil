@@ -1,16 +1,17 @@
+#include "lib.h"
+#include <getopt.h>
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
 #include <stdint.h>
 #include <string.h>
-#include <unistd.h>
 #include <termios.h>
-#include <getopt.h>
-#include <openssl/evp.h>
-#include <openssl/crypto.h>
-#include <openssl/rand.h>
-#include "lib.h"
+#include <unistd.h>
 
 extern struct cryptoStruct *cryptStGlobal;
 
-uint8_t isSupportedCipher(uint8_t *cipher) {
+uint8_t isSupportedCipher(uint8_t *cipher)
+{
     if (strstr(cipher, "aes-128-cbc-hmac-sha1") ||
         strstr(cipher, "aes-128-cbc-hmac-sha256") ||
         strstr(cipher, "aes-128-ccm") ||
@@ -54,32 +55,32 @@ uint8_t isSupportedCipher(uint8_t *cipher) {
         strstr(cipher, "idea-ecb") ||
         strstr(cipher, "idea-ofb") ||
         strstr(cipher, "id-smime-alg-CMS3DESwrap")) {
-            return 0;
-        } else if(EVP_CIPHER_block_size(EVP_get_cipherbyname(cipher)) > 1) {
-            return 0;
-        } else {
-            return 1;
-        }
+        return 0;
+    } else if(EVP_CIPHER_get_block_size(EVP_get_cipherbyname(cipher)) > 1) {
+		return 0;
+    } else {
+        return 1;
+    }
 }
 
 uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
     int expectedRetVal = 0;
-    if(size == 1) {
+    if (size == 1) {
         expectedRetVal = size;
     } else {
         expectedRetVal = nmemb;
     }
-    
+
     uint64_t retVal = fread(ptr, size, nmemb, stream);
-    
-    if ( retVal != expectedRetVal ){
-        if (ferror(stream) || ( retVal == 0 && !feof(stream) )) {
+
+    if (retVal != expectedRetVal) {
+        if (ferror(stream) || (retVal == 0 && !feof(stream))) {
             st->miscSt.returnVal = errno;
             return errno;
         }
     }
-    
+
     st->miscSt.freadAmt = retVal;
 
     return 0;
@@ -88,16 +89,16 @@ uint64_t freadWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, stru
 uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, struct dataStruct *st)
 {
     int expectedRetVal = 0;
-    if(size == 1) {
+    if (size == 1) {
         expectedRetVal = size;
     } else {
         expectedRetVal = nmemb;
     }
-    
+
     int retVal = fwrite(ptr, size, nmemb, stream);
-    
-    if ( retVal != expectedRetVal ){
-       if (ferror(stream)) {
+
+    if (retVal != expectedRetVal) {
+        if (ferror(stream)) {
             st->miscSt.returnVal = errno;
             return errno;
         }
@@ -110,14 +111,14 @@ uint64_t getFileSize(const char *filename)
 {
     struct stat st;
     stat(filename, &st);
-    
+
     /*If file is a FIFO, return the max value possible for type*/
-    
-    if(S_ISFIFO(st.st_mode)) {
-		return (uint64_t)~0;
-	} else {
-		return st.st_size;
-	}
+
+    if (S_ISFIFO(st.st_mode)) {
+        return (uint64_t)~0;
+    } else {
+        return st.st_size;
+    }
 }
 
 size_t getBufSizeMultiple(char *value)
@@ -216,11 +217,12 @@ void cleanUpBuffers(void)
     OPENSSL_cleanse(cryptStGlobal->userPassToVerify, strlen(cryptStGlobal->userPassToVerify));
 
     OPENSSL_cleanse(cryptStGlobal->keyFileHash, sizeof(cryptStGlobal->keyFileHash));
-    
+
     free(cryptStGlobal);
 }
 
-FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st) {
+FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
+{
     /*Read cryptoHeader from head of cipher-text or fail if malformed*/
     if (freadWErrCheck(&st->cryptoHeader, sizeof(st->cryptoHeader), 1, inFile, st) != 0) {
         PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -228,19 +230,19 @@ FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st) {
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    if(strcmp(st->cryptoHeader.evpEncUtilString,"evpencutil") != 0) {
+    if (strcmp(st->cryptoHeader.evpEncUtilString, "evpencutil") != 0) {
         PRINT_ERROR("Not a file produced with evpencutil, exiting");
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    
+
     /*Populate cryptSt members from cryptoHeader*/
     memcpy(st->cryptSt.evpSalt, st->cryptoHeader.evpSalt, sizeof(*st->cryptSt.evpSalt) * EVP_SALT_SIZE);
-    
+
     /*Parse algorithmString*/
-    
+
     char *token_save_ptr;
-    char *token = strtok_r(st->cryptoHeader.algorithmString, ":",&token_save_ptr);
+    char *token = strtok_r(st->cryptoHeader.algorithmString, ":", &token_save_ptr);
     if (token == NULL) {
         printf("Could not parse header.\nIs %s a evpencutil file?\n", st->fileNameSt.inputFileName);
         remove(st->fileNameSt.outputFileName);
@@ -252,14 +254,14 @@ FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st) {
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    if(st->cryptSt.encAlgorithm != NULL) {
+    if (st->cryptSt.encAlgorithm != NULL) {
         free(st->cryptSt.encAlgorithm);
     }
     st->cryptSt.encAlgorithm = strdup(token);
-    #ifdef gui
+#ifdef gui
     gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), 0, st->cryptSt.encAlgorithm);
     gtk_combo_box_set_active(GTK_COMBO_BOX(st->guiSt.encAlgorithmComboBox), 0);
-    #endif
+#endif
 
     token = strtok_r(NULL, ":", &token_save_ptr);
     if (token == NULL) {
@@ -273,30 +275,30 @@ FILE * parseCryptoHeader(FILE *inFile, struct dataStruct *st) {
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    if(st->cryptSt.mdAlgorithm != NULL) {
+    if (st->cryptSt.mdAlgorithm != NULL) {
         free(st->cryptSt.mdAlgorithm);
     }
     st->cryptSt.mdAlgorithm = strdup(token);
-    
+
     /* Do not forget to make st->cryptoHeader.algorithmString the same format it was when
      * computed for the MAC */
-    snprintf(st->cryptoHeader.algorithmString, ALGORITHM_STRING_SIZE,"%s:%s",st->cryptSt.encAlgorithm, st->cryptSt.mdAlgorithm);
-    
-    #ifdef gui
+    snprintf(st->cryptoHeader.algorithmString, ALGORITHM_STRING_SIZE, "%s:%s", st->cryptSt.encAlgorithm, st->cryptSt.mdAlgorithm);
+
+#ifdef gui
     gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), 0, st->cryptSt.mdAlgorithm);
     gtk_combo_box_set_active(GTK_COMBO_BOX(st->guiSt.mdAlgorithmComboBox), 0);
-    #endif
-    
+#endif
+
     st->cryptSt.nFactor = st->cryptoHeader.scryptWorkFactors[0];
     st->cryptSt.rFactor = st->cryptoHeader.scryptWorkFactors[1];
     st->cryptSt.pFactor = st->cryptoHeader.scryptWorkFactors[2];
-    
-    #ifdef gui
+
+#ifdef gui
     gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.nFactorSpinButtonAdj), (gdouble)st->cryptSt.nFactor);
     gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.rFactorSpinButtonAdj), (gdouble)st->cryptSt.rFactor);
     gtk_adjustment_set_value(GTK_ADJUSTMENT(st->guiSt.pFactorSpinButtonAdj), (gdouble)st->cryptSt.pFactor);
-    #endif
-    
+#endif
+
     return st->miscSt.inFile;
 }
 
@@ -356,7 +358,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 
     if (!RAND_bytes(paddedPassTmp, MAX_PASS_SIZE)) {
         fprintf(stderr, "Failure: CSPRNG bytes could not be made unpredictable\n");
-        if(!st->optSt.displayPass) {
+        if (!st->optSt.displayPass) {
             /* Restore terminal. */
             (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
         }
@@ -371,7 +373,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 
     int nread = 0;
 
-    if(!st->optSt.displayPass) {
+    if (!st->optSt.displayPass) {
         /* Turn echoing off and fail if we can’t. */
         if (tcgetattr(fileno(stdin), &termiosOld) != 0) {
             remove(st->fileNameSt.outputFileName);
@@ -391,9 +393,8 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
     if (nread == -1) {
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
-    }
-    else if (nread > (MAX_PASS_SIZE - 1)) {
-        if(!st->optSt.displayPass) {
+    } else if (nread > (MAX_PASS_SIZE - 1)) {
+        if (!st->optSt.displayPass) {
             /* Restore terminal. */
             (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
         }
@@ -408,7 +409,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
         pass[nread - 1] = '\0';
     }
 
-    if(!st->optSt.displayPass) {
+    if (!st->optSt.displayPass) {
         /* Restore terminal. */
         (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
     }
@@ -428,24 +429,25 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 }
 
 #ifdef gui
-int writeBenchmark(double time, double rate, struct dataStruct *st) {
-    FILE *benchmarkFile = fopen("benchmark.txt","a");
-    if(benchmarkFile == NULL) {
-        PRINT_FILE_ERROR("benchmark.txt",errno);
+int writeBenchmark(double time, double rate, struct dataStruct *st)
+{
+    FILE *benchmarkFile = fopen("benchmark.txt", "a");
+    if (benchmarkFile == NULL) {
+        PRINT_FILE_ERROR("benchmark.txt", errno);
         return 1;
     }
-    
-    fprintf(benchmarkFile,"Mode: %s\n", st->guiSt.encryptOrDecrypt);
-    fprintf(benchmarkFile,"Cipher: %s\n", st->cryptSt.encAlgorithm);
-    fprintf(benchmarkFile,"Digest: %s\n", st->cryptSt.mdAlgorithm);
-    fprintf(benchmarkFile,"FileBuffer: %s\n", st->guiSt.fileBufSizeComboBoxText);
-    fprintf(benchmarkFile,"AuthBuffer: %s\n", st->guiSt.authBufSizeComboBoxText);
-    fprintf(benchmarkFile,"Elapsed: %0.2fs\n", time);
-    fprintf(benchmarkFile,"Throughput: %0.2f MB/s\n", rate);
-    fprintf(benchmarkFile,"\n");
-    
+
+    fprintf(benchmarkFile, "Mode: %s\n", st->guiSt.encryptOrDecrypt);
+    fprintf(benchmarkFile, "Cipher: %s\n", st->cryptSt.encAlgorithm);
+    fprintf(benchmarkFile, "Digest: %s\n", st->cryptSt.mdAlgorithm);
+    fprintf(benchmarkFile, "FileBuffer: %s\n", st->guiSt.fileBufSizeComboBoxText);
+    fprintf(benchmarkFile, "AuthBuffer: %s\n", st->guiSt.authBufSizeComboBoxText);
+    fprintf(benchmarkFile, "Elapsed: %0.2fs\n", time);
+    fprintf(benchmarkFile, "Throughput: %0.2f MB/s\n", rate);
+    fprintf(benchmarkFile, "\n");
+
     fclose(benchmarkFile);
-    
+
     return 0;
 }
 #endif
@@ -466,7 +468,7 @@ void parseOptions(
             {"help", no_argument, 0, 'h'},
             {"encrypt", no_argument, 0, 'e'},
             {"decrypt", no_argument, 0, 'd'},
-            {"benchmark",no_argument, 0, 'B'},
+            {"benchmark", no_argument, 0, 'B'},
             {"prompt-for-pass", no_argument, 0, 'P'},
             {"verify-pass", no_argument, 0, 'V'},
             {"display-pass", no_argument, 0, 'D'},
@@ -522,11 +524,11 @@ void parseOptions(
                 errflg++;
                 break;
             } else if (optarg[0] == '-') {
-				st->optSt.inputFileGiven = true;
-				st->fileNameSt.inputFileName = strdup("stdin");
-				
-				st->optSt.readFromStdin = true;
-			} else {
+                st->optSt.inputFileGiven = true;
+                st->fileNameSt.inputFileName = strdup("stdin");
+
+                st->optSt.readFromStdin = true;
+            } else {
                 st->optSt.inputFileGiven = true;
                 st->fileNameSt.inputFileName = strdup(optarg);
             }
@@ -537,11 +539,11 @@ void parseOptions(
                 errflg++;
                 break;
             } else if (optarg[0] == '-') {
-				st->optSt.outputFileGiven = true;
-				st->fileNameSt.outputFileName = strdup("stdout");
-				
-				st->optSt.writeToStdout = true;
-			} else {
+                st->optSt.outputFileGiven = true;
+                st->fileNameSt.outputFileName = strdup("stdout");
+
+                st->optSt.writeToStdout = true;
+            } else {
                 st->optSt.outputFileGiven = true;
                 st->fileNameSt.outputFileName = strdup(optarg);
             }
@@ -552,11 +554,11 @@ void parseOptions(
                 errflg++;
                 break;
             } else if (optarg[0] == '-') {
-				st->optSt.keyFileGiven = true;
-				st->fileNameSt.keyFileName = strdup("stdin");
-				
-				st->optSt.keyFromStdin = true;
-			} else {
+                st->optSt.keyFileGiven = true;
+                st->fileNameSt.keyFileName = strdup("stdin");
+
+                st->optSt.keyFromStdin = true;
+            } else {
                 st->optSt.keyFileGiven = true;
                 st->fileNameSt.keyFileName = strdup(optarg);
             }
@@ -659,7 +661,6 @@ void parseOptions(
 
                         st->optSt.authBufSizeGiven = true;
                         st->cryptSt.genAuthBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
-                        makeMultipleOf(&st->cryptSt.genAuthBufSize, sizeof(uint64_t));
                         break;
                     case FILE_BUFFER:
                         if (value == NULL) {
@@ -673,7 +674,6 @@ void parseOptions(
                         st->optSt.fileBufSizeGiven = true;
 
                         st->cryptSt.fileBufSize = (atol(value) * getBufSizeMultiple(value));
-                        makeMultipleOf(&st->cryptSt.fileBufSize, sizeof(uint64_t));
                         break;
                     default:
                         fprintf(stderr, "No match found for token: /%s/\n", value);
@@ -755,21 +755,30 @@ void parseOptions(
         fprintf(stderr, "Input file and output file are the same\n");
         errflg++;
     }
-    
+
     if (st->optSt.getPassFromPrompt && st->optSt.getPassFromArg) {
         fprintf(stderr, "Supply the password either via prompt or via arg, not both\n");
         errflg++;
     }
-    
+
     if (st->optSt.readFromStdin && st->optSt.keyFromStdin) {
         fprintf(stderr, "Cannot read both input file and keyfile from standard input. Must choose only one, or use a FIFO.\n");
         errflg++;
     }
     
+    if(st->optSt.fileBufSizeGiven && st->optSt.encAlgorithmGiven) {
+		uint8_t cipherBlockSize = EVP_CIPHER_get_block_size(EVP_get_cipherbyname(st->cryptSt.encAlgorithm));
+		
+		if(st->cryptSt.fileBufSize % cipherBlockSize) {
+			fprintf(stderr,"File buffer size (%zu) needs to be a multiple of the cipher block size (%d) if using %s\nReducing to %zu\n", st->cryptSt.fileBufSize, cipherBlockSize, st->cryptSt.encAlgorithm, st->cryptSt.fileBufSize - (st->cryptSt.fileBufSize % cipherBlockSize));
+			makeMultipleOf(&st->cryptSt.fileBufSize, cipherBlockSize);
+		}
+	}
+
     for (int i = 1; i < argc; i++) {
         OPENSSL_cleanse(argv[i], strlen(argv[i]));
     }
-            
+
     if (errflg) {
         printSyntax(binName);
         exit(EXIT_FAILURE);
