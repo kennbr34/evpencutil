@@ -13,7 +13,7 @@ cat $1 | while read cipher ; do
 	dd if=/dev/urandom of=./testfile bs=1 count=$COUNT &> /dev/null
 	$BINPATH -e -i ./testfile -o ./testfile.enc -p password -c "$cipher" &> /dev/null
 	if [ $? != 0 ] ; then
-		#echo ""$cipher" failed encryption"
+		echo ""$cipher" failed encryption"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 		continue
 	fi
@@ -22,10 +22,10 @@ cat $1 | while read cipher ; do
 	if [ $? != 0 ] ; then
 		echo ""$cipher" failed decryption"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
-		#continue
+		continue
 	fi
 
-cmp ./testfile ./testfile.plain
+	cmp ./testfile ./testfile.plain
 	if [ $? != 0 ] ; then
 		echo ""$cipher" failed comparison"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
