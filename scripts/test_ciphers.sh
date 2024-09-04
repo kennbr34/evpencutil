@@ -1,10 +1,10 @@
 #!/bin/bash
 
-BUFFER=`echo $(echo $RANDOM)b`
+BUFFER=`echo $(echo $RANDOM | cut -b -4)b`
 COUNT=$(echo $RANDOM)
-BINPATH="./bin/evpencutil-cli -w N=1024"
+BINPATH="./bin/evpencutil-cli -w N=1024 -b file_buffer=$BUFFER"
 
-echo "Testing with $COUNT bytes and default buffer"
+echo "Testing with $COUNT bytes and $BUFFER buffer"
 
 cat $1 | while read cipher ; do
 
@@ -13,7 +13,7 @@ cat $1 | while read cipher ; do
 	dd if=/dev/urandom of=./testfile bs=1 count=$COUNT &> /dev/null
 	$BINPATH -e -i ./testfile -o ./testfile.enc -p password -c "$cipher" &> /dev/null
 	if [ $? != 0 ] ; then
-		echo ""$cipher" failed encryption"
+		#$echo ""$cipher" failed encryption"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 		continue
 	fi
