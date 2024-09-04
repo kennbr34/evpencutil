@@ -84,15 +84,19 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             st->cryptSt.fileBufSize = amountReadLast;
 
             uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(evp_ctx);
-
-            if (bytesRead % cipherBlockSize) {
-                paddingAmount = cipherBlockSize - (bytesRead % cipherBlockSize);
-            }
-
-            uint8_t *paddingArray = calloc(paddingAmount, sizeof(*paddingArray));
-            memset(paddingArray, paddingAmount, sizeof(paddingAmount) * paddingAmount);
-
-            memcpy(inBuffer + amountReadLast, paddingArray, sizeof(*paddingArray) * paddingAmount);
+			
+			if(cipherBlockSize > 1) {
+	            if (bytesRead % cipherBlockSize) {
+	                paddingAmount = cipherBlockSize - (bytesRead % cipherBlockSize);
+	            } else if (bytesRead % cipherBlockSize == 0) {
+					paddingAmount = cipherBlockSize;
+				}
+	
+	            uint8_t *paddingArray = calloc(paddingAmount, sizeof(*paddingArray));
+	            memset(paddingArray, paddingAmount, sizeof(paddingAmount) * paddingAmount);
+	
+	            memcpy(inBuffer + amountReadLast, paddingArray, sizeof(*paddingArray) * paddingAmount);
+			}
 
         } else {
             remainingBytes -= st->cryptSt.fileBufSize;
@@ -287,6 +291,18 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             if (cipherBlockSize > 1) {
                 paddingAmount = outBuffer[evpOutputLength - 1];
             }
+            
+            uint8_t *paddingArray = calloc(paddingAmount,sizeof(*paddingArray));
+            memset(paddingArray,paddingAmount,sizeof(*paddingArray) * paddingAmount);
+            
+            if (CRYPTO_memcmp(outBuffer + (evpOutputLength - cipherBlockSize), paddingArray, sizeof(*paddingArray) * cipherBlockSize) != 0) {
+	            printf("Bad padding\n");
+	#ifdef gui
+	            strcpy(st->guiSt.statusMessage, "Bad padding");
+	#endif
+	            remove(st->fileNameSt.outputFileName);
+	            exit(EXIT_FAILURE);
+	        }
         }
 
         if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength - paddingAmount, outFile, st) != 0) {
@@ -323,6 +339,9 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 #endif
         loopIterations++;
     }
+
+    EVP_CIPHER_CTX_free(evp_ctx);
+    EVP_MD_CTX_free(md_ctx);
 
     OPENSSL_cleanse(inBuffer, sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
     OPENSSL_cleanse(outBuffer, sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));

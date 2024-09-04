@@ -1,3 +1,7 @@
+0.2.3
+
+Re-enabled support for padded ciphers
+
 0.2.2
 
 Reverted to disabling padded ciphers https://github.com/kennbr34/evpencutil/pull/7
