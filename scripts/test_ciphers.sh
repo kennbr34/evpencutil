@@ -1,33 +1,33 @@
 #!/bin/bash
 
-BUFFER=`echo $(echo $RANDOM)k`
-COUNT=$(echo $RANDOM | cut -b -2)
-BINPATH="./bin/evpencutil-cli -w N=1024 -b file_buffer=$BUFFER"
+BUFFER=`echo $(echo $RANDOM)b`
+COUNT=$(echo $RANDOM)
+BINPATH="./bin/evpencutil-cli -w N=1024"
 
-#echo "Testing with $COUNT megabytes and $BUFFER buffer"
+echo "Testing with $COUNT bytes and default buffer"
 
 cat $1 | while read cipher ; do
 
 	#echo "Testing "$cipher""
 
-	dd if=/dev/urandom of=./testfile bs=1M count=$COUNT &> /dev/null
+	dd if=/dev/urandom of=./testfile bs=1 count=$COUNT &> /dev/null
 	$BINPATH -e -i ./testfile -o ./testfile.enc -p password -c "$cipher" &> /dev/null
 	if [ $? != 0 ] ; then
-		echo ""$cipher" does not work"
+		#echo ""$cipher" failed encryption"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 		continue
 	fi
 
 	$BINPATH -d -i ./testfile.enc -o ./testfile.plain -p password &> /dev/null
 	if [ $? != 0 ] ; then
-		echo ""$cipher" does not work"
+		echo ""$cipher" failed decryption"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
-		continue
+		#continue
 	fi
 
-	cmp ./testfile ./testfile.plain &> /dev/null
+cmp ./testfile ./testfile.plain
 	if [ $? != 0 ] ; then
-		#echo ""$cipher" does not work"
+		echo ""$cipher" failed comparison"
 		rm ./testfile ./testfile.enc ./testfile.plain &> /dev/null
 		continue
 	fi

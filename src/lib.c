@@ -659,7 +659,6 @@ void parseOptions(
 
                         st->optSt.authBufSizeGiven = true;
                         st->cryptSt.genAuthBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
-                        makeMultipleOf(&st->cryptSt.genAuthBufSize, sizeof(uint64_t));
                         break;
                     case FILE_BUFFER:
                         if (value == NULL) {
@@ -673,7 +672,6 @@ void parseOptions(
                         st->optSt.fileBufSizeGiven = true;
 
                         st->cryptSt.fileBufSize = (atol(value) * getBufSizeMultiple(value));
-                        makeMultipleOf(&st->cryptSt.fileBufSize, sizeof(uint64_t));
                         break;
                     default:
                         fprintf(stderr, "No match found for token: /%s/\n", value);
@@ -765,6 +763,15 @@ void parseOptions(
         fprintf(stderr, "Cannot read both input file and keyfile from standard input. Must choose only one, or use a FIFO.\n");
         errflg++;
     }
+    
+    if(st->optSt.fileBufSizeGiven && st->optSt.encAlgorithmGiven) {
+		uint8_t cipherBlockSize = EVP_CIPHER_get_block_size(EVP_get_cipherbyname(st->cryptSt.encAlgorithm));
+		
+		if(st->cryptSt.fileBufSize % cipherBlockSize) {
+			fprintf(stderr,"File buffer size (%zu) needs to be a multiple of the cipher block size (%d) if using %s\nReducing to %zu\n", st->cryptSt.fileBufSize, cipherBlockSize, st->cryptSt.encAlgorithm, st->cryptSt.fileBufSize - (st->cryptSt.fileBufSize % cipherBlockSize));
+			makeMultipleOf(&st->cryptSt.fileBufSize, cipherBlockSize);
+		}
+	}
 
     for (int i = 1; i < argc; i++) {
         OPENSSL_cleanse(argv[i], strlen(argv[i]));
