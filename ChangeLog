@@ -1,3 +1,7 @@
+0.2.5
+
+Added ability to specify "null" cipher for testing
+
 0.2.4
 
 Changed benchmarking function to write in CSV format
