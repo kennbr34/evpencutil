@@ -714,13 +714,17 @@ void parseOptions(
                     exit(EXIT_FAILURE);
                 }
 
-                st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
-                if (!st->cryptSt.evpCipher) {
-                    fprintf(stderr, "Could not load cipher: %s\n", st->cryptSt.encAlgorithm);
-                    exit(EXIT_FAILURE);
-                } else if (!isSupportedCipher(st->cryptSt.encAlgorithm)) {
-                    fprintf(stderr, "Cipher not supported: %s\n", st->cryptSt.encAlgorithm);
-                    exit(EXIT_FAILURE);
+                if(strcmp(st->cryptSt.encAlgorithm,"null") == 0) {
+                    st->cryptSt.evpCipher = EVP_enc_null();
+                } else {
+                    st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
+                    if (!st->cryptSt.evpCipher) {
+                        fprintf(stderr, "Could not load cipher: %s\n", st->cryptSt.encAlgorithm);
+                        exit(EXIT_FAILURE);
+                    } else if (!isSupportedCipher(st->cryptSt.encAlgorithm)) {
+                        fprintf(stderr, "Cipher not supported: %s\n", st->cryptSt.encAlgorithm);
+                        exit(EXIT_FAILURE);
+                    }
                 }
 
                 st->optSt.encAlgorithmGiven = true;

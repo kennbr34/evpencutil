@@ -98,9 +98,13 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
     st->cryptSt.mdAlgorithm = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox));
 
     st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
-    if (!st->cryptSt.evpCipher) {
-        sprintf(st->guiSt.statusMessage, "Could not load cipher: %s\n", st->cryptSt.encAlgorithm);
-        error = TRUE;
+    if(strcmp(st->cryptSt.encAlgorithm,"null") == 0) {
+        st->cryptSt.evpCipher = EVP_enc_null();
+    } else {
+        if (!st->cryptSt.evpCipher) {
+            sprintf(st->guiSt.statusMessage, "Could not load cipher: %s\n", st->cryptSt.encAlgorithm);
+            error = TRUE;
+        }
     }
 
     st->cryptSt.evpDigest = EVP_get_digestbyname(st->cryptSt.mdAlgorithm);
