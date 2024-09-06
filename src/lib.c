@@ -108,7 +108,9 @@ uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, str
 uint64_t getFileSize(const char *filename)
 {
     struct stat st;
-    stat(filename, &st);
+    if(stat(filename, &st) == -1) {
+		return 0;
+	}
 
     /*If file is a FIFO, return the max value possible for type*/
 
@@ -429,19 +431,33 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 #ifdef gui
 int writeBenchmark(double time, double rate, struct dataStruct *st)
 {
-    FILE *benchmarkFile = fopen("benchmark.txt", "a");
-    if (benchmarkFile == NULL) {
-        PRINT_FILE_ERROR("benchmark.txt", errno);
-        return 1;
-    }
-
-    fprintf(benchmarkFile, "Mode: %s\n", st->guiSt.encryptOrDecrypt);
-    fprintf(benchmarkFile, "Cipher: %s\n", st->cryptSt.encAlgorithm);
-    fprintf(benchmarkFile, "Digest: %s\n", st->cryptSt.mdAlgorithm);
-    fprintf(benchmarkFile, "FileBuffer: %s\n", st->guiSt.fileBufSizeComboBoxText);
-    fprintf(benchmarkFile, "AuthBuffer: %s\n", st->guiSt.authBufSizeComboBoxText);
-    fprintf(benchmarkFile, "Elapsed: %0.2fs\n", time);
-    fprintf(benchmarkFile, "Throughput: %0.2f MB/s\n", rate);
+	FILE *benchmarkFile = NULL;
+	char benchmarkFileName[] = "benchmark.csv";
+	
+	
+	if(!getFileSize(benchmarkFileName)) {
+		benchmarkFile = fopen(benchmarkFileName, "w");
+		if (benchmarkFile == NULL) {
+			PRINT_FILE_ERROR(benchmarkFileName, errno);
+			return 1;
+		}
+		
+		fprintf(benchmarkFile,"Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),\n");
+	} else {
+		benchmarkFile = fopen(benchmarkFileName, "a");
+		if (benchmarkFile == NULL) {
+			PRINT_FILE_ERROR(benchmarkFileName, errno);
+			return 1;
+		}
+	}
+		
+    fprintf(benchmarkFile, "%s,", st->guiSt.encryptOrDecrypt);
+    fprintf(benchmarkFile, "%s,", st->cryptSt.encAlgorithm);
+    fprintf(benchmarkFile, "%s,", st->cryptSt.mdAlgorithm);
+    fprintf(benchmarkFile, "%s,", st->guiSt.fileBufSizeComboBoxText);
+    fprintf(benchmarkFile, "%s,", st->guiSt.authBufSizeComboBoxText);
+    fprintf(benchmarkFile, "%0.2f,", time);
+    fprintf(benchmarkFile, "%0.2f,", rate);
     fprintf(benchmarkFile, "\n");
 
     fclose(benchmarkFile);
@@ -467,6 +483,7 @@ void parseOptions(
             {"encrypt", no_argument, 0, 'e'},
             {"decrypt", no_argument, 0, 'd'},
             {"benchmark", no_argument, 0, 'B'},
+            {"benchmark-amount", no_argument, 0, 'a'},
             {"prompt-for-pass", no_argument, 0, 'P'},
             {"verify-pass", no_argument, 0, 'V'},
             {"display-pass", no_argument, 0, 'D'},
@@ -483,7 +500,7 @@ void parseOptions(
         char *subopts;
         char *value;
 
-        c = getopt_long(argc, argv, "hqedPVDBi:o:k:p:w:b:c:m:",
+        c = getopt_long(argc, argv, "hqedPVDBa:i:o:k:p:w:b:c:m:",
                         long_options, &option_index);
         if (c == -1)
             break;
@@ -505,6 +522,10 @@ void parseOptions(
             break;
         case 'B':
             st->optSt.benchmark = true;
+            break;
+        case 'a':
+            st->optSt.benchmarkTime = true;
+            st->miscSt.benchmarkTime = atol(optarg);
             break;
         case 'V':
             st->optSt.verifyPass = true;

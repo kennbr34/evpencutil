@@ -1,14 +1,14 @@
-#include <openssl/crypto.h>
-#include <openssl/evp.h>
 #include <stdint.h>
+#include <openssl/evp.h>
+#include <openssl/crypto.h>
 #if OPENSSL_VERSION_MAJOR >= 3
 #include <openssl/provider.h>
 #endif
-#include "lib.h"
-#include <gtk/gtk.h>
 #include <signal.h>
 #include <string.h>
+#include <gtk/gtk.h>
 #include <sys/mman.h>
+#include "lib.h"
 
 struct cryptoStruct *cryptStGlobal = NULL;
 
@@ -199,7 +199,7 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
             workThread('e', st);
         } else if (strcmp(st->guiSt.encryptOrDecrypt, "decrypt") == 0) {
             strcpy(st->guiSt.statusMessage, "Starting decryption...");
-            // parseCryptoHeader(st);
+            //parseCryptoHeader(st);
             workThread('d', st);
         }
     }
@@ -324,10 +324,10 @@ int main(int argc, char *argv[])
 
     allocateBuffers(&st);
 
-#if OPENSSL_VERSION_MAJOR >= 3
+    #if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
     OSSL_PROVIDER_load(NULL, "default");
-#endif
+    #endif
 
     OpenSSL_add_all_algorithms();
 
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
     GtkWidget *encAlgorithmLabel = gtk_label_new("Encryption Algorithm");
     st.guiSt.encAlgorithmComboBox = gtk_combo_box_text_new();
     OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, &st);
-
+    
     char encAlgorithmToolTipText[] = "\
     Choose which encryption algorithm to use\n\
     Best options: aes-256-ctr or chacha20\n\
@@ -384,7 +384,7 @@ int main(int argc, char *argv[])
     GtkWidget *mdAlgorithmLabel = gtk_label_new("Message Digest Algorithm");
     st.guiSt.mdAlgorithmComboBox = gtk_combo_box_text_new();
     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, &st);
-
+    
     char mdAlgorithmToolTipText[] = "\
     Choose which message digest algorithm to use. This is what will be used by HMAC as the hash\
     for your authentication code, as well as what HKDF will use as a hash for key derivation\n\

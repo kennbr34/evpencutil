@@ -71,6 +71,7 @@ struct optionsStruct {
     bool encrypt;
     bool decrypt;
     bool benchmark;
+    bool benchmarkTime;
     bool inputFileGiven;
     bool readFromStdin;
     bool writeToStdout;
@@ -97,6 +98,7 @@ struct miscStruct {
     uint64_t returnVal;
     uint64_t freadAmt;
     FILE *inFile;
+    size_t benchmarkTime;
 };
 
 #ifdef gui

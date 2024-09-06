@@ -1,3 +1,7 @@
+0.2.4
+
+Changed benchmarking function to write in CSV format
+
 0.2.3
 
 Re-enabled support for padded ciphers

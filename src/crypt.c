@@ -164,6 +164,12 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
         sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Encrypting...", dataRate, st->guiSt.totalTime);
         st->guiSt.averageRate = dataRate;
+        
+        if (st->optSt.benchmark) {
+			if(st->optSt.benchmarkTime && st->guiSt.totalTime >= st->miscSt.benchmarkTime) {
+				remainingBytes = 0;
+			}
+		}
 #endif
         loopIterations++;
     }
