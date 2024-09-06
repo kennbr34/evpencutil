@@ -12,7 +12,7 @@
 #include <time.h>
 #include <pthread.h>
 
-#define NUM_THREADS 1
+#define NUM_THREADS 64
 
 typedef struct {
     uint8_t *inBuffer;
