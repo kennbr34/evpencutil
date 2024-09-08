@@ -37,6 +37,8 @@ int main(int argc, char *argv[])
 
     st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
+    
+    st.cryptSt.threadNumber = 1;
 
     parseOptions(argc, argv, &st);
 

@@ -12,8 +12,6 @@
 #include <time.h>
 #include <pthread.h>
 
-#define NUM_THREADS 64
-
 typedef struct {
     uint8_t *inBuffer;
     uint8_t *outBuffer;
@@ -50,8 +48,8 @@ void *thread_encrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
 
-    EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
-    EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+    //EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
+    //EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     EVP_DigestUpdate(data->md_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
     if (data->paddingAmount) {
         data->st.cryptSt.fileBufSize += data->paddingAmount;
@@ -59,7 +57,7 @@ void *thread_encrypt_chunk(void *arg) {
     EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
-
+    
     // Write the encrypted data and the MAC using mutex to ensure thread-safe writing
     pthread_mutex_lock(data->fileMutex);
     
@@ -74,6 +72,7 @@ void *thread_encrypt_chunk(void *arg) {
 
         exit(EXIT_FAILURE);
     }
+    fflush(data->outFile);
     *(data->bytesWritten) += evpOutputLength;
     
     if (fwriteWErrCheck(data->macBuffer, sizeof(*data->macBuffer), HMACLengthPtr, data->outFile, &data->st) != 0) {
@@ -82,6 +81,7 @@ void *thread_encrypt_chunk(void *arg) {
         remove(data->st.fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
+    fflush(data->outFile);
     *(data->bytesWritten) += HMACLengthPtr;
         
     pthread_mutex_unlock(data->fileMutex);
@@ -101,7 +101,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     uint64_t remainingBytes = fileSize;
     uint32_t evpOutputLength = 0;
 
-    uint64_t loopIterations = 0;
+    uint64_t loopIterations = 0, activeThreads = 0;
 
     uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
     if (inBuffer == NULL || outBuffer == NULL) {
@@ -121,12 +121,24 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     st->guiSt.totalTime = 0;
 #endif
 
-    pthread_t threads[NUM_THREADS];
-    thread_data_t thread_data[NUM_THREADS];
+    pthread_t threads[st->cryptSt.threadNumber];
+    thread_data_t thread_data[st->cryptSt.threadNumber];
     pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
+    
+    for(int i = 0; i < st->cryptSt.threadNumber; i++) {
+	    thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
+	    if(thread_data[i].evp_ctx == NULL) {
+			ERR_print_errors_fp(stderr);
+			exit(EXIT_FAILURE);
+		}
+		if(!EVP_CIPHER_CTX_init(thread_data[0].evp_ctx)) {
+			ERR_print_errors_fp(stderr);
+			exit(EXIT_FAILURE);
+		}
+		thread_data[i].md_ctx = EVP_MD_CTX_new();
+	}
 
     while (remainingBytes) {
-        int activeThreads = 0;
         
          #ifdef gui
         clock_gettime(CLOCK_REALTIME, &begin);
@@ -135,16 +147,13 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         st->guiSt.startBytes = bytesWritten;
         #endif
         
-        for (int i = 0; i < NUM_THREADS; i++) {
+        for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
             //printf("Reading chunk %d with %lu bytes remaining...\n", i, remainingBytes);
+            
             if (!loopIterations) {
-                thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
-                EVP_CIPHER_CTX_init(evp_ctx);
-                thread_data[i].md_ctx = EVP_MD_CTX_new();
-            } else {
-                EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx);
-                EVP_MD_CTX_reset(thread_data[i].md_ctx);
-            }
+	            EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx);
+	            EVP_MD_CTX_reset(thread_data[i].md_ctx);
+	        }
     
             EVP_EncryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
@@ -206,19 +215,16 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             // Create the thread for encrypting this chunk
             pthread_create(&threads[i], NULL, thread_encrypt_chunk, &thread_data[i]);
             
-            //genHMACKey(st,thread_data[i].macBuffer, HMACLengthPtr);
-            genChunkKey(st);
-            
             activeThreads++;
 
         }
         
-        for (int i = 0; i < activeThreads; i++) {
+        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
             pthread_join(threads[i], NULL);
             
-            // Clean up
-            //EVP_CIPHER_CTX_free(thread_data[i].evp_ctx);
-            //EVP_MD_CTX_free(thread_data[i].md_ctx);
+            genHMACKey(st,thread_data[i].macBuffer, HMACLengthPtr);
+            genChunkKey(st);
+			
             free(thread_data[i].inBuffer);
             free(thread_data[i].outBuffer);
             free(thread_data[i].macBuffer);
@@ -254,8 +260,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     }
     pthread_mutex_destroy(&fileMutex);
 
-    EVP_CIPHER_CTX_free(evp_ctx);
-    EVP_MD_CTX_free(md_ctx);
     OPENSSL_cleanse(inBuffer, sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
     OPENSSL_cleanse(outBuffer, sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
@@ -343,8 +347,8 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
             memcpy(st->cryptSt.fileMAC, inBuffer + st->cryptSt.fileBufSize, EVP_MAX_MD_SIZE);
         }
-        EVP_DigestUpdate(md_ctx, &st->cryptoHeader, sizeof(st->cryptoHeader));
-        EVP_DigestUpdate(md_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+        //EVP_DigestUpdate(md_ctx, &st->cryptoHeader, sizeof(st->cryptoHeader));
+        //EVP_DigestUpdate(md_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
         EVP_DigestUpdate(md_ctx, inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize);
         EVP_DigestUpdate(md_ctx, &st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
 

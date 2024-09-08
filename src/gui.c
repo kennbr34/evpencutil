@@ -316,6 +316,8 @@ int main(int argc, char *argv[])
 
     st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
+    
+    st.cryptSt.threadNumber = 1;
 
     /*These must be mapped as shared memory for the worker thread to manipulate their values in the main thread*/
     st.guiSt.statusMessage = mmap(NULL, 256, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);

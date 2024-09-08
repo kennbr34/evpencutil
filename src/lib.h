@@ -57,6 +57,8 @@ struct cryptoStruct {
 
     char *encAlgorithm;
     char *mdAlgorithm;
+    
+    uint64_t threadNumber;
 };
 
 struct fileNames {
@@ -92,6 +94,7 @@ struct optionsStruct {
     bool quitWhenDone;
     bool encAlgorithmGiven;
     bool mdAlgorithmGiven;
+    bool useThreads;
 };
 
 struct miscStruct {
