@@ -26,6 +26,7 @@ typedef struct {
     pthread_mutex_t *fileMutex;
     uint64_t *bytesWritten;
     uint64_t *remainingBytes;
+    uint64_t origFileBufSize;
     struct dataStruct st;
     #ifdef gui
     struct guiStruct guiSt;
@@ -131,7 +132,7 @@ void *thread_decrypt_chunk(void *arg) {
     }
     
     uint8_t paddingAmount = 0;
-    if (*(data->remainingBytes) == 0) {
+    if (data->st.cryptSt.fileBufSize < data->origFileBufSize) {
         if (data->cipherBlockSize > 1) {
             paddingAmount = data->outBuffer[evpOutputLength - 1];
         }
@@ -152,7 +153,7 @@ void *thread_decrypt_chunk(void *arg) {
     }
 
     //printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + paddingAmount, paddingAmount);
-    if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength, data->outFile, &data->st) != 0) {
+    if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
 
@@ -370,6 +371,8 @@ struct timespec begin, end;
     uint32_t evpOutputLength = 0;
 
     uint64_t loopIterations = 0, activeThreads = 0;
+    
+    uint64_t origFileBufSize = st->cryptSt.fileBufSize;
 
     uint8_t *inBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH + EVP_MAX_MD_SIZE, sizeof(*inBuffer)), *outBuffer = calloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH, sizeof(*outBuffer));
     if (inBuffer == NULL || outBuffer == NULL) {
@@ -473,6 +476,7 @@ struct timespec begin, end;
             //TODO: This should not need to be initialized, but it does
             thread_data[i].paddingAmount = 0;
             thread_data[i].remainingBytes = &remainingBytes;
+            thread_data[i].origFileBufSize = origFileBufSize;
             thread_data[i].st.cryptSt.fileBufSize = st->cryptSt.fileBufSize;
             thread_data[i].cipherBlockSize = cipherBlockSize;
             #ifdef gui
