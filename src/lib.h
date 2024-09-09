@@ -197,6 +197,8 @@ struct dataStruct {
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
     }
 
+char * getCpuName(void);
+size_t getNumCores(void);
 uint8_t isSupportedCipher(uint8_t *cipher);
 void allocateBuffers(struct dataStruct *st);
 void cleanUpBuffers(void);

@@ -11,6 +11,57 @@
 
 extern struct cryptoStruct *cryptStGlobal;
 
+size_t getNumCores(void)
+{
+    FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
+    if(cpuInfoFile == NULL) {
+        perror("/proc/cpuinfo");
+        fclose(cpuInfoFile);
+        return 0;
+    }
+
+    char cpuInfoLine[256];
+    while(fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile))
+    {
+        size_t numCores = 0;
+        if(sscanf(cpuInfoLine, "cpu cores : %zu", &numCores) == 1)
+        {
+            fclose(cpuInfoFile);
+            return numCores;
+        }
+    }
+
+    fclose(cpuInfoFile);
+    
+    return 0;
+}
+
+char * getCpuName(void)
+{
+    FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
+    if(cpuInfoFile == NULL) {
+        perror("/proc/cpuinfo");
+        fclose(cpuInfoFile);
+        return 0;
+    }
+
+    char cpuInfoLine[256];
+    while(fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile))
+    {
+        if (strncmp(cpuInfoLine, "model name", 10) == 0) {
+            char *colon = strchr(cpuInfoLine, ':');
+            if (colon != NULL) {
+                colon[strlen(colon) - 1] = '\0';
+                return strdup(colon + 2);
+            }
+        }
+    }
+
+    fclose(cpuInfoFile);
+    
+    return NULL;
+}
+
 uint8_t isSupportedCipher(uint8_t *cipher)
 {
     if (strstr(cipher, "aes-128-cbc-hmac-sha1") ||
@@ -448,7 +499,7 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
 			return 1;
 		}
 		
-		fprintf(benchmarkFile,"Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),Threads,\n");
+		fprintf(benchmarkFile,"Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),Threads,Cores,CPU,\n");
 	} else {
 		benchmarkFile = fopen(benchmarkFileName, "a");
 		if (benchmarkFile == NULL) {
@@ -465,6 +516,8 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
     fprintf(benchmarkFile, "%0.2f,", time);
     fprintf(benchmarkFile, "%0.2f,", rate);
     fprintf(benchmarkFile, "%zu,", st->cryptSt.threadNumber);
+    fprintf(benchmarkFile, "%zu,", getNumCores());
+    fprintf(benchmarkFile, "%s,", getCpuName());
     fprintf(benchmarkFile, "\n");
 
     fclose(benchmarkFile);
