@@ -53,13 +53,13 @@ void *thread_encrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
 
-    //EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
-    //EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+    EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
+    EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     EVP_DigestUpdate(data->md_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
-    //if (data->paddingAmount) {
-        //data->st.cryptSt.fileBufSize += data->paddingAmount;
-    //}
-    //EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
+    if (data->paddingAmount) {
+        data->st.cryptSt.fileBufSize += data->paddingAmount;
+    }
+    EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
     
@@ -100,10 +100,10 @@ void *thread_decrypt_chunk(void *arg) {
     // Write the encrypted data and the MAC using mutex to ensure thread-safe writing
     pthread_mutex_lock(data->fileMutex);
     
-    //EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
-    //EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+    EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
+    EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     EVP_DigestUpdate(data->md_ctx, data->inBuffer, sizeof(*data->inBuffer) * data->st.cryptSt.fileBufSize);
-    //EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
+    EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
     
