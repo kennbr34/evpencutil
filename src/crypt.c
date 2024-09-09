@@ -39,7 +39,6 @@ void *thread_encrypt_chunk(void *arg) {
     uint32_t HMACLengthPtr = 0;
     struct timespec begin, end;
     
-    // Write the encrypted data and the MAC using mutex to ensure thread-safe writing
     pthread_mutex_lock(data->fileMutex);
     if (!EVP_EncryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize + data->paddingAmount)) {
         fprintf(stderr, "EVP_EncryptUpdate failed\n");
@@ -98,7 +97,6 @@ void *thread_decrypt_chunk(void *arg) {
     uint32_t HMACLengthPtr = 0;
     struct timespec begin, end;
     
-    // Write the encrypted data and the MAC using mutex to ensure thread-safe writing
     pthread_mutex_lock(data->fileMutex);
     
     EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
@@ -113,11 +111,10 @@ void *thread_decrypt_chunk(void *arg) {
 #ifdef gui
         strcpy(data->st.guiSt.statusMessage, "Authentication failure");
 #endif
-        //remove(st->fileNameSt.outputFileName);
-        //exit(EXIT_FAILURE);
+        remove(data->st.fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
     }
     
-    //printf("%zu\n", data->st.cryptSt.fileBufSize);
     if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize)) {
         fprintf(stderr, "EVP_DecryptUpdate failed\n");
         ERR_print_errors_fp(stderr);
@@ -146,13 +143,12 @@ void *thread_decrypt_chunk(void *arg) {
     #ifdef gui
                 strcpy(data->st.guiSt.statusMessage, "Bad padding");
     #endif
-                //remove(st->fileNameSt.outputFileName);
-                //exit(EXIT_FAILURE);
+                remove(data->st.fileNameSt.outputFileName);
+                exit(EXIT_FAILURE);
             }
         }
     }
 
-    //printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + paddingAmount, paddingAmount);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
@@ -256,9 +252,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     
             amountReadLast = st->miscSt.freadAmt;
             bytesRead += amountReadLast;
-            
-            //printf("Read %zu bytes, creating thread %d...\n", amountReadLast, i);
-    
+                
             uint8_t paddingAmount = 0;
             
             uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(thread_data[i].evp_ctx);
@@ -299,7 +293,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             memcpy(&thread_data[i].st.cryptoHeader,&st->cryptoHeader,sizeof(st->cryptoHeader));
             memcpy(thread_data[i].st.cryptSt.passKeyedHash,st->cryptSt.passKeyedHash,sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
 
-            // Create the thread for encrypting this chunk
             pthread_create(&threads[i], NULL, thread_encrypt_chunk, &thread_data[i]);
             
             activeThreads++;
@@ -486,7 +479,6 @@ struct timespec begin, end;
             memcpy(thread_data[i].st.cryptSt.passKeyedHash,st->cryptSt.passKeyedHash,sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
             memcpy(thread_data[i].st.cryptSt.fileMAC,st->cryptSt.fileMAC,sizeof(*st->cryptSt.fileMAC) * EVP_MAX_MD_SIZE);
     
-            // Create the thread for decrypting this chunk
             pthread_create(&threads[i], NULL, thread_decrypt_chunk, &thread_data[i]);
             
             activeThreads++;
