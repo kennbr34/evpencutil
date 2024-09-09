@@ -152,7 +152,7 @@ void *thread_decrypt_chunk(void *arg) {
     }
 
     //printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + paddingAmount, paddingAmount);
-    if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
+    if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
 
@@ -302,6 +302,8 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             pthread_create(&threads[i], NULL, thread_encrypt_chunk, &thread_data[i]);
             
             activeThreads++;
+            genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
+            genChunkKey(st);
 
         }
         
@@ -484,6 +486,8 @@ struct timespec begin, end;
             pthread_create(&threads[i], NULL, thread_decrypt_chunk, &thread_data[i]);
             
             activeThreads++;
+            genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
+            genChunkKey(st);
         }
         
         for (int i = 0; i < activeThreads; i++) {
