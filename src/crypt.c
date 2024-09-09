@@ -37,7 +37,6 @@ void *thread_encrypt_chunk(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
-    struct timespec begin, end;
     
     pthread_mutex_lock(data->fileMutex);
     if (!EVP_EncryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize + data->paddingAmount)) {
@@ -95,7 +94,6 @@ void *thread_decrypt_chunk(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
-    struct timespec begin, end;
     
     pthread_mutex_lock(data->fileMutex);
     
@@ -172,13 +170,11 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 {
 #ifdef gui
     *(st->guiSt.progressFraction) = 0.0;
-#endif
-
     struct timespec begin, end;
+#endif
     
     uint64_t bytesWritten = 0, bytesRead = 0, amountReadLast = 0;
     uint64_t remainingBytes = fileSize;
-    uint32_t evpOutputLength = 0;
 
     uint64_t loopIterations = 0, activeThreads = 0;
 
@@ -189,10 +185,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-
-    EVP_CIPHER_CTX *evp_ctx = NULL;
-
-    EVP_MD_CTX *md_ctx = NULL;
 
     uint32_t HMACLengthPtr = 0;
 
@@ -355,13 +347,11 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 {
 #ifdef gui
     *(st->guiSt.progressFraction) = 0.0;
+    struct timespec end;
 #endif
-
-struct timespec begin, end;
 
     uint64_t bytesWritten = 0, bytesRead = 0, amountReadLast = 0;
     uint64_t remainingBytes = fileSize;
-    uint32_t evpOutputLength = 0;
 
     uint64_t loopIterations = 0, activeThreads = 0;
     
@@ -420,7 +410,7 @@ struct timespec begin, end;
             EVP_DigestInit_ex(thread_data[i].md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
     
     #ifdef gui
-            struct timespec begin, end;
+            struct timespec begin;
             clock_gettime(CLOCK_REALTIME, &begin);
             st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
     
