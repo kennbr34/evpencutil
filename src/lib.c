@@ -166,7 +166,7 @@ uint64_t getFileSize(const char *filename)
 
     /*If file is a FIFO, return the max value possible for type*/
 
-    if (S_ISFIFO(st.st_mode)) {
+    if (S_ISFIFO(st.st_mode) || S_ISCHR(st.st_mode) || S_ISSOCK(st.st_mode)) {
         return (uint64_t)~0;
     } else {
         return st.st_size;
