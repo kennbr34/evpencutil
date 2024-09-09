@@ -116,7 +116,7 @@ void *thread_decrypt_chunk(void *arg) {
         //exit(EXIT_FAILURE);
     }
     
-    printf("%zu\n", data->st.cryptSt.fileBufSize);
+    //printf("%zu\n", data->st.cryptSt.fileBufSize);
     if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize)) {
         fprintf(stderr, "EVP_DecryptUpdate failed\n");
         ERR_print_errors_fp(stderr);
@@ -151,7 +151,7 @@ void *thread_decrypt_chunk(void *arg) {
         }
     }
 
-    printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + paddingAmount, paddingAmount);
+    //printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + paddingAmount, paddingAmount);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
@@ -478,6 +478,7 @@ struct timespec begin, end;
             #endif
             memcpy(&thread_data[i].st.cryptoHeader,&st->cryptoHeader,sizeof(st->cryptoHeader));
             memcpy(thread_data[i].st.cryptSt.passKeyedHash,st->cryptSt.passKeyedHash,sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+            memcpy(thread_data[i].st.cryptSt.fileMAC,st->cryptSt.fileMAC,sizeof(*st->cryptSt.fileMAC) * EVP_MAX_MD_SIZE);
     
             // Create the thread for decrypting this chunk
             pthread_create(&threads[i], NULL, thread_decrypt_chunk, &thread_data[i]);
