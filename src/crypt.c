@@ -102,7 +102,7 @@ void *thread_decrypt_chunk(void *arg) {
     
     //EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
     //EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
-    EVP_DigestUpdate(data->md_ctx, data->inBuffer, sizeof(*data->inBuffer) * evpOutputLength);
+    EVP_DigestUpdate(data->md_ctx, data->inBuffer, sizeof(*data->inBuffer) * data->st.cryptSt.fileBufSize);
     //EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
@@ -117,7 +117,7 @@ void *thread_decrypt_chunk(void *arg) {
     }
     
     printf("%zu\n", data->st.cryptSt.fileBufSize);
-    if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize + data->paddingAmount)) {
+    if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize)) {
         fprintf(stderr, "EVP_DecryptUpdate failed\n");
         ERR_print_errors_fp(stderr);
         EVP_CIPHER_CTX_cleanup(data->evp_ctx);
@@ -129,10 +129,9 @@ void *thread_decrypt_chunk(void *arg) {
 
         exit(EXIT_FAILURE);
     }
-    printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + data->paddingAmount, data->paddingAmount); 
     
     uint8_t paddingAmount = 0;
-    if (data->remainingBytes == 0) {
+    if (*(data->remainingBytes) == 0) {
         if (data->cipherBlockSize > 1) {
             paddingAmount = data->outBuffer[evpOutputLength - 1];
         }
@@ -152,6 +151,7 @@ void *thread_decrypt_chunk(void *arg) {
         }
     }
 
+    printf("evpOutputLength: %zu, input: %zu, %d\n", evpOutputLength,data->st.cryptSt.fileBufSize + paddingAmount, paddingAmount);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
@@ -468,6 +468,7 @@ struct timespec begin, end;
             thread_data[i].outFile = outFile;
             thread_data[i].fileMutex = &fileMutex;
             thread_data[i].bytesWritten = &bytesWritten;
+            //TODO: This should not need to be initialized, but it does
             thread_data[i].paddingAmount = 0;
             thread_data[i].remainingBytes = &remainingBytes;
             thread_data[i].st.cryptSt.fileBufSize = st->cryptSt.fileBufSize;
