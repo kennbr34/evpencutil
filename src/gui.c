@@ -28,9 +28,9 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 void mdListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
-
-    /*Do not list shake128 since it will not work*/
-    if (!strstr(obj->name, "shake128")) {
+    
+    /*Do not list shake128 or shake256 since they will not work*/
+    if (!strstr(obj->name, "shake")) {
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), obj->name);
     }
 }

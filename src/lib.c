@@ -11,6 +11,36 @@
 
 extern struct cryptoStruct *cryptStGlobal;
 
+#ifndef gui
+/*Lists available encryption algorithms in OpenSSL's EVP library*/
+void encListCallback(const OBJ_NAME *obj, void *arg)
+{
+    struct dataStruct *st = (struct dataStruct *)arg;
+
+    if(st->optSt.listSupportedCiphers) {
+        if (isSupportedCipher((unsigned char *)obj->name)) {
+            printf("%s\n", obj->name);
+        }
+    } else if(st->optSt.listAllCiphers) {
+        printf("%s\n", obj->name);
+    }
+}
+
+/*Lists available encryption algorithms in OpenSSL's EVP library*/
+void mdListCallback(const OBJ_NAME *obj, void *arg)
+{
+    struct dataStruct *st = (struct dataStruct *)arg;
+    
+    if(st->optSt.listSupportedDigests) {
+        if (isSupportedDigest((unsigned char *)obj->name)) {
+            printf("%s\n", obj->name);
+        }
+    } else if(st->optSt.listAllDigests) {
+        printf("%s\n", obj->name);
+    }
+}
+#endif
+
 size_t getNumCores(void)
 {
     FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
@@ -107,6 +137,16 @@ uint8_t isSupportedCipher(uint8_t *cipher)
         strstr(cipher, "idea-ecb") ||
         strstr(cipher, "idea-ofb") ||
         strstr(cipher, "id-smime-alg-CMS3DESwrap")) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+uint8_t isSupportedDigest(uint8_t *digest)
+{
+    if (strstr(digest, "shake128") ||
+        strstr(digest, "shake256")) {
         return 0;
     } else {
         return 1;
@@ -790,6 +830,14 @@ void parseOptions(
 
                 if(strcmp(st->cryptSt.encAlgorithm,"null") == 0) {
                     st->cryptSt.evpCipher = EVP_enc_null();
+                } else if (strcmp(st->cryptSt.encAlgorithm,"list-supported") == 0) {
+                    st->optSt.listSupportedCiphers = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, st);
+                    exit(EXIT_SUCCESS);
+                } else if (strcmp(st->cryptSt.encAlgorithm,"list-all") == 0) {
+                    st->optSt.listAllCiphers = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, st);
+                    exit(EXIT_SUCCESS);
                 } else {
                     st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
                     if (!st->cryptSt.evpCipher) {
@@ -816,10 +864,20 @@ void parseOptions(
                     exit(EXIT_FAILURE);
                 }
 
-                st->cryptSt.evpDigest = EVP_get_digestbyname(st->cryptSt.mdAlgorithm);
-                if (!st->cryptSt.evpDigest) {
-                    fprintf(stderr, "Could not load digest: %s\n", st->cryptSt.mdAlgorithm);
-                    exit(EXIT_FAILURE);
+                if(strcmp(st->cryptSt.mdAlgorithm,"list-supported") == 0) {
+                    st->optSt.listSupportedDigests = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
+                    exit(EXIT_SUCCESS);
+                } else if(strcmp(st->cryptSt.mdAlgorithm,"list-all") == 0) {
+                    st->optSt.listAllDigests = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
+                    exit(EXIT_SUCCESS);
+                } else {
+                    st->cryptSt.evpDigest = EVP_get_digestbyname(st->cryptSt.mdAlgorithm);
+                    if (!st->cryptSt.evpDigest) {
+                        fprintf(stderr, "Could not load digest: %s\n", st->cryptSt.mdAlgorithm);
+                        exit(EXIT_FAILURE);
+                    }
                 }
 
                 st->optSt.mdAlgorithmGiven = true;

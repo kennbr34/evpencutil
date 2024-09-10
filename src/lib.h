@@ -95,6 +95,10 @@ struct optionsStruct {
     bool encAlgorithmGiven;
     bool mdAlgorithmGiven;
     bool useThreads;
+    bool listAllCiphers;
+    bool listSupportedCiphers;
+    bool listSupportedDigests;
+    bool listAllDigests;
 };
 
 struct miscStruct {
@@ -196,10 +200,14 @@ struct dataStruct {
     { \
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
     }
-
+#ifndef gui
+void encListCallback(const OBJ_NAME *obj, void *arg);
+void mdListCallback(const OBJ_NAME *obj, void *arg);
+#endif
 char * getCpuName(void);
 size_t getNumCores(void);
 uint8_t isSupportedCipher(uint8_t *cipher);
+uint8_t isSupportedDigest(uint8_t *digest);
 void allocateBuffers(struct dataStruct *st);
 void cleanUpBuffers(void);
 void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st);

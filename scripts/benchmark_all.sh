@@ -1,7 +1,7 @@
 #!/bin/bash
 
-cat $1 | while read cipher ; do
-	cat $2 | while read digest ; do
-		cat /dev/zero | ./bin/evpencutil-gui -q -B -a 5 -e -i - -o /dev/null -p password -c $cipher -m $digest -w N=1024
+./bin/evpencutil-cli -c list-supported | sort | while read cipher ; do
+	./bin/evpencutil-cli -m list-supported | sort | while read digest ; do
+		./bin/evpencutil-gui -c "$cipher" -m "$digest" "$@"
 	done
 done
