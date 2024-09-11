@@ -24,6 +24,7 @@ typedef struct {
     uint8_t *evpKey;
     FILE *outFile;
     pthread_mutex_t *fileMutex;
+    pthread_mutex_t *cryptoMutex;
     uint64_t *bytesWritten;
     uint64_t *remainingBytes;
     uint64_t origFileBufSize;
@@ -35,6 +36,9 @@ typedef struct {
 
 void *thread_encrypt_chunk(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
+    setvbuf(data->outFile, NULL, _IONBF, 0);
+    
+    pthread_mutex_lock(data->cryptoMutex);
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
     
@@ -56,16 +60,15 @@ void *thread_encrypt_chunk(void *arg) {
     EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     EVP_DigestUpdate(data->md_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
         
-    pthread_mutex_lock(data->fileMutex);
     if (data->paddingAmount) {
         data->st.cryptSt.fileBufSize += data->paddingAmount;
     }
-    pthread_mutex_unlock(data->fileMutex);
         
     EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
-    
+    pthread_mutex_unlock(data->cryptoMutex);
+
     pthread_mutex_lock(data->fileMutex);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
@@ -97,6 +100,9 @@ void *thread_encrypt_chunk(void *arg) {
 
 void *thread_decrypt_chunk(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
+    setvbuf(data->outFile, NULL, _IONBF, 0);
+    
+    pthread_mutex_lock(data->cryptoMutex);
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
     
@@ -107,7 +113,6 @@ void *thread_decrypt_chunk(void *arg) {
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
     
-    pthread_mutex_lock(data->fileMutex);
     if (CRYPTO_memcmp(data->st.cryptSt.fileMAC, data->macBuffer, sizeof(*data->macBuffer) * EVP_MAX_MD_SIZE) != 0) {
         printf("Message authentication failed\n");
 #ifdef gui
@@ -116,7 +121,6 @@ void *thread_decrypt_chunk(void *arg) {
         remove(data->st.fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    pthread_mutex_unlock(data->fileMutex);
     
     if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize)) {
         fprintf(stderr, "EVP_DecryptUpdate failed\n");
@@ -131,7 +135,6 @@ void *thread_decrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     
-    pthread_mutex_lock(data->fileMutex);
     uint8_t paddingAmount = 0;
     if (data->st.cryptSt.fileBufSize < data->origFileBufSize) {
         if (data->cipherBlockSize > 1) {
@@ -152,7 +155,9 @@ void *thread_decrypt_chunk(void *arg) {
             }
         }
     }
+    pthread_mutex_unlock(data->cryptoMutex);
     
+    pthread_mutex_lock(data->fileMutex);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
@@ -200,7 +205,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
     pthread_t threads[st->cryptSt.threadNumber];
     thread_data_t thread_data[st->cryptSt.threadNumber];
-    pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER, cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
     
     for(int i = 0; i < st->cryptSt.threadNumber; i++) {
 	    thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
@@ -227,7 +232,8 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         activeThreads = 0;
         
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-                        
+            
+            pthread_mutex_lock(&cryptoMutex);
             if (!loopIterations) {
                 ERR_clear_error();
 	            EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx);
@@ -238,6 +244,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
     
             EVP_DigestInit_ex(thread_data[i].md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+            pthread_mutex_unlock(&cryptoMutex);
     
             if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
                 PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -282,6 +289,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             thread_data[i].macBuffer = malloc(EVP_MAX_MD_SIZE);
             thread_data[i].outFile = outFile;
             thread_data[i].fileMutex = &fileMutex;
+            thread_data[i].cryptoMutex = &cryptoMutex;
             thread_data[i].bytesWritten = &bytesWritten;
             thread_data[i].st.cryptSt.fileBufSize = st->cryptSt.fileBufSize;
             thread_data[i].paddingAmount = paddingAmount;
@@ -306,10 +314,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
-                        
-            free(thread_data[i].inBuffer);
-            free(thread_data[i].outBuffer);
-            free(thread_data[i].macBuffer);
         }
         
         #ifdef gui
@@ -383,7 +387,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
     pthread_t threads[st->cryptSt.threadNumber];
     thread_data_t thread_data[st->cryptSt.threadNumber];
-    pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER, cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
     
     for(int i = 0; i < st->cryptSt.threadNumber; i++) {
 	    thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
@@ -397,13 +401,14 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 		}
 		thread_data[i].md_ctx = EVP_MD_CTX_new();
 	}
-
+    
     while (remainingBytes) {
         
         activeThreads = 0;
 
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
             
+            pthread_mutex_lock(&cryptoMutex);
             if (!loopIterations) {
                 ERR_clear_error();
 	            EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx);
@@ -415,7 +420,8 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
     
             EVP_DigestInit_ex(thread_data[i].md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
-    
+            pthread_mutex_unlock(&cryptoMutex);
+            
     #ifdef gui
             struct timespec begin;
             clock_gettime(CLOCK_REALTIME, &begin);
@@ -462,6 +468,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             thread_data[i].macBuffer = malloc(EVP_MAX_MD_SIZE);
             thread_data[i].outFile = outFile;
             thread_data[i].fileMutex = &fileMutex;
+            thread_data[i].cryptoMutex = &cryptoMutex;
             thread_data[i].bytesWritten = &bytesWritten;
             thread_data[i].remainingBytes = &remainingBytes;
             thread_data[i].origFileBufSize = origFileBufSize;
@@ -488,10 +495,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
-                        
-            free(thread_data[i].inBuffer);
-            free(thread_data[i].outBuffer);
-            free(thread_data[i].macBuffer);
         }
         
 #ifdef gui
