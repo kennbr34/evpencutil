@@ -554,7 +554,7 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
     fprintf(benchmarkFile, "%s,", st->guiSt.fileBufSizeComboBoxText);
     fprintf(benchmarkFile, "%s,", st->guiSt.authBufSizeComboBoxText);
     fprintf(benchmarkFile, "%0.2f,", time);
-    fprintf(benchmarkFile, "%0.2f,", rate);
+    fprintf(benchmarkFile, rate < 1 ? "%0.2f," : "%f,", rate);
     fprintf(benchmarkFile, "%zu,", st->cryptSt.threadNumber);
     fprintf(benchmarkFile, "%zu,", getNumCores());
     fprintf(benchmarkFile, "%s,", getCpuName());
@@ -864,7 +864,9 @@ void parseOptions(
                     exit(EXIT_FAILURE);
                 }
 
-                if(strcmp(st->cryptSt.mdAlgorithm,"list-supported") == 0) {
+                if(strcmp(st->cryptSt.mdAlgorithm,"null") == 0) {
+                    st->cryptSt.evpDigest = EVP_md_null();
+                } else if(strcmp(st->cryptSt.mdAlgorithm,"list-supported") == 0) {
                     st->optSt.listSupportedDigests = true;
                     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
                     exit(EXIT_SUCCESS);

@@ -38,6 +38,7 @@ void *thread_encrypt_chunk(void *arg) {
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
     
+    
     if (!EVP_EncryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize + data->paddingAmount)) {
         fprintf(stderr, "EVP_EncryptUpdate failed\n");
         ERR_print_errors_fp(stderr);
@@ -54,19 +55,16 @@ void *thread_encrypt_chunk(void *arg) {
     EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
     EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     EVP_DigestUpdate(data->md_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
-    
+        
     pthread_mutex_lock(data->fileMutex);
-    
     if (data->paddingAmount) {
         data->st.cryptSt.fileBufSize += data->paddingAmount;
     }
-    
     pthread_mutex_unlock(data->fileMutex);
-    
+        
     EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
-    
     
     pthread_mutex_lock(data->fileMutex);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength, data->outFile, &data->st) != 0) {
@@ -154,7 +152,7 @@ void *thread_decrypt_chunk(void *arg) {
             }
         }
     }
-
+    
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength - paddingAmount, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
@@ -167,7 +165,7 @@ void *thread_decrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     fflush(data->outFile);
-    data->bytesWritten += evpOutputLength;
+    *(data->bytesWritten) += evpOutputLength;
         
     pthread_mutex_unlock(data->fileMutex);
 
@@ -229,7 +227,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         activeThreads = 0;
         
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-            //printf("Reading chunk %d with %lu bytes remaining...\n", i, remainingBytes);
                         
             if (!loopIterations) {
                 ERR_clear_error();
@@ -466,8 +463,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             thread_data[i].outFile = outFile;
             thread_data[i].fileMutex = &fileMutex;
             thread_data[i].bytesWritten = &bytesWritten;
-            //TODO: This should not need to be initialized, but it does
-            thread_data[i].paddingAmount = 0;
             thread_data[i].remainingBytes = &remainingBytes;
             thread_data[i].origFileBufSize = origFileBufSize;
             thread_data[i].st.cryptSt.fileBufSize = st->cryptSt.fileBufSize;
@@ -628,7 +623,7 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     uint64_t bytesRead = 0;
 
     HMAC_CTX *ctx = HMAC_CTX_new();
-    HMAC_Init_ex(ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+    HMAC_Init_ex(ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, st->cryptSt.evpDigest, NULL);
 
     uint64_t i;
     for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
@@ -677,11 +672,6 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 
 void genChunkKey(struct dataStruct *st)
 {
-
-//#ifdef gui
-    //strcpy(st->guiSt.statusMessage, "Deriving chunk key...");
-//#endif
-
     EVP_PKEY_CTX *pctx;
     size_t outlen = sizeof(*st->cryptSt.evpKey) * EVP_MAX_KEY_LENGTH;
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
@@ -692,7 +682,7 @@ void genChunkKey(struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm)) <= 0) {
+    if (EVP_PKEY_CTX_set_hkdf_md(pctx, st->cryptSt.evpDigest) <= 0) {
         PRINT_ERROR("EVP_PKEY_CTX_set_hkdf_md\n");
         ERR_print_errors_fp(stderr);
         remove(st->fileNameSt.outputFileName);
@@ -728,11 +718,6 @@ void genChunkKey(struct dataStruct *st)
 
 void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize)
 {
-
-//#ifdef gui
-    //strcpy(st->guiSt.statusMessage, "Deriving auth key...");
-//#endif
-
     EVP_PKEY_CTX *pctx;
     size_t outlen = sizeof(*st->cryptSt.hmacKey) * HMAC_KEY_SIZE;
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
@@ -743,7 +728,7 @@ void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm)) <= 0) {
+    if (EVP_PKEY_CTX_set_hkdf_md(pctx, st->cryptSt.evpDigest) <= 0) {
         PRINT_ERROR("EVP_PKEY_CTX_set_hkdf_md failed\n");
         ERR_print_errors_fp(stderr);
         remove(st->fileNameSt.outputFileName);
@@ -870,7 +855,7 @@ void HKDFKeyFile(struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm)) <= 0) {
+    if (EVP_PKEY_CTX_set_hkdf_md(pctx, st->cryptSt.evpDigest) <= 0) {
         PRINT_ERROR("EVP_PKEY_CTX_set_hkdf_md failed\n");
         ERR_print_errors_fp(stderr);
         remove(st->fileNameSt.outputFileName);
