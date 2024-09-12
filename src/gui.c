@@ -28,9 +28,9 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 void mdListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
-
-    /*Do not list shake128 since it will not work*/
-    if (!strstr(obj->name, "shake128")) {
+    
+    /*Do not list shake128 or shake256 since they will not work*/
+    if (!strstr(obj->name, "shake")) {
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), obj->name);
     }
 }
@@ -316,6 +316,8 @@ int main(int argc, char *argv[])
 
     st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
+    
+    st.cryptSt.threadNumber = 1;
 
     /*These must be mapped as shared memory for the worker thread to manipulate their values in the main thread*/
     st.guiSt.statusMessage = mmap(NULL, 256, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);

@@ -7,8 +7,90 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
 
 extern struct cryptoStruct *cryptStGlobal;
+
+#ifndef gui
+/*Lists available encryption algorithms in OpenSSL's EVP library*/
+void encListCallback(const OBJ_NAME *obj, void *arg)
+{
+    struct dataStruct *st = (struct dataStruct *)arg;
+
+    if(st->optSt.listSupportedCiphers) {
+        if (isSupportedCipher((unsigned char *)obj->name)) {
+            printf("%s\n", obj->name);
+        }
+    } else if(st->optSt.listAllCiphers) {
+        printf("%s\n", obj->name);
+    }
+}
+
+/*Lists available encryption algorithms in OpenSSL's EVP library*/
+void mdListCallback(const OBJ_NAME *obj, void *arg)
+{
+    struct dataStruct *st = (struct dataStruct *)arg;
+    
+    if(st->optSt.listSupportedDigests) {
+        if (isSupportedDigest((unsigned char *)obj->name)) {
+            printf("%s\n", obj->name);
+        }
+    } else if(st->optSt.listAllDigests) {
+        printf("%s\n", obj->name);
+    }
+}
+#endif
+
+size_t getNumCores(void)
+{
+    FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
+    if(cpuInfoFile == NULL) {
+        perror("/proc/cpuinfo");
+        fclose(cpuInfoFile);
+        return 0;
+    }
+
+    char cpuInfoLine[256];
+    while(fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile))
+    {
+        size_t numCores = 0;
+        if(sscanf(cpuInfoLine, "cpu cores : %zu", &numCores) == 1)
+        {
+            fclose(cpuInfoFile);
+            return numCores;
+        }
+    }
+
+    fclose(cpuInfoFile);
+    
+    return 0;
+}
+
+char * getCpuName(void)
+{
+    FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
+    if(cpuInfoFile == NULL) {
+        perror("/proc/cpuinfo");
+        fclose(cpuInfoFile);
+        return 0;
+    }
+
+    char cpuInfoLine[256];
+    while(fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile))
+    {
+        if (strncmp(cpuInfoLine, "model name", 10) == 0) {
+            char *colon = strchr(cpuInfoLine, ':');
+            if (colon != NULL) {
+                colon[strlen(colon) - 1] = '\0';
+                return strdup(colon + 2);
+            }
+        }
+    }
+
+    fclose(cpuInfoFile);
+    
+    return NULL;
+}
 
 uint8_t isSupportedCipher(uint8_t *cipher)
 {
@@ -55,6 +137,16 @@ uint8_t isSupportedCipher(uint8_t *cipher)
         strstr(cipher, "idea-ecb") ||
         strstr(cipher, "idea-ofb") ||
         strstr(cipher, "id-smime-alg-CMS3DESwrap")) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+uint8_t isSupportedDigest(uint8_t *digest)
+{
+    if (strstr(digest, "shake128") ||
+        strstr(digest, "shake256")) {
         return 0;
     } else {
         return 1;
@@ -114,7 +206,7 @@ uint64_t getFileSize(const char *filename)
 
     /*If file is a FIFO, return the max value possible for type*/
 
-    if (S_ISFIFO(st.st_mode)) {
+    if (S_ISFIFO(st.st_mode) || S_ISCHR(st.st_mode) || S_ISSOCK(st.st_mode)) {
         return (uint64_t)~0;
     } else {
         return st.st_size;
@@ -218,7 +310,7 @@ void cleanUpBuffers(void)
 
     OPENSSL_cleanse(cryptStGlobal->keyFileHash, sizeof(cryptStGlobal->keyFileHash));
 
-    free(cryptStGlobal);
+    DDFREE(free,cryptStGlobal);
 }
 
 FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
@@ -248,15 +340,18 @@ FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
+    
     st->cryptSt.evpCipher = EVP_get_cipherbyname(token);
-    if (!st->cryptSt.evpCipher) {
-        fprintf(stderr, "Could not load cipher: %s\n", token);
-        remove(st->fileNameSt.outputFileName);
-        exit(EXIT_FAILURE);
-    }
-    if (st->cryptSt.encAlgorithm != NULL) {
-        free(st->cryptSt.encAlgorithm);
-    }
+    if(strcmp(token,"null") == 0) {
+		st->cryptSt.evpCipher = EVP_enc_null();
+	} else {
+	    if (!st->cryptSt.evpCipher) {
+	        fprintf(stderr, "Could not load cipher: %s\n", token);
+	        remove(st->fileNameSt.outputFileName);
+	        exit(EXIT_FAILURE);
+	    }
+	}
+    DDFREE(free,st->cryptSt.encAlgorithm);
     st->cryptSt.encAlgorithm = strdup(token);
 #ifdef gui
     gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), 0, st->cryptSt.encAlgorithm);
@@ -276,7 +371,7 @@ FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     if (st->cryptSt.mdAlgorithm != NULL) {
-        free(st->cryptSt.mdAlgorithm);
+        DDFREE(free,st->cryptSt.mdAlgorithm);
     }
     st->cryptSt.mdAlgorithm = strdup(token);
 
@@ -368,7 +463,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
     }
     memcpy(paddedPass, paddedPassTmp, sizeof(*paddedPass) * MAX_PASS_SIZE);
     OPENSSL_cleanse(paddedPassTmp, sizeof(*paddedPassTmp) * MAX_PASS_SIZE);
-    free(paddedPassTmp);
+    DDFREE(free,paddedPassTmp);
     paddedPassTmp = NULL;
 
     int nread = 0;
@@ -399,7 +494,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
             (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
         }
         OPENSSL_cleanse(pass, sizeof(*pass) * nread);
-        free(pass);
+        DDFREE(free,pass);
         pass = NULL;
         fprintf(stderr, "\nPassword was too large\n");
         remove(st->fileNameSt.outputFileName);
@@ -422,7 +517,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
         paddedPass[i] = pass[i];
 
     OPENSSL_cleanse(pass, sizeof(*pass) * nread);
-    free(pass);
+    DDFREE(free,pass);
     pass = NULL;
 
     return paddedPass;
@@ -442,7 +537,7 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
 			return 1;
 		}
 		
-		fprintf(benchmarkFile,"Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),\n");
+		fprintf(benchmarkFile,"Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),Threads,Cores,CPU,\n");
 	} else {
 		benchmarkFile = fopen(benchmarkFileName, "a");
 		if (benchmarkFile == NULL) {
@@ -457,7 +552,10 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
     fprintf(benchmarkFile, "%s,", st->guiSt.fileBufSizeComboBoxText);
     fprintf(benchmarkFile, "%s,", st->guiSt.authBufSizeComboBoxText);
     fprintf(benchmarkFile, "%0.2f,", time);
-    fprintf(benchmarkFile, "%0.2f,", rate);
+    fprintf(benchmarkFile, rate < 1 ? "%0.2f," : "%f,", rate);
+    fprintf(benchmarkFile, "%zu,", st->cryptSt.threadNumber);
+    fprintf(benchmarkFile, "%zu,", getNumCores());
+    fprintf(benchmarkFile, "%s,", getCpuName());
     fprintf(benchmarkFile, "\n");
 
     fclose(benchmarkFile);
@@ -488,6 +586,7 @@ void parseOptions(
             {"verify-pass", no_argument, 0, 'V'},
             {"display-pass", no_argument, 0, 'D'},
             {"input-file", required_argument, 0, 'i'},
+            {"threads", required_argument, 0, 't'},
             {"output-file", required_argument, 0, 'o'},
             {"key-file", required_argument, 0, 'k'},
             {"password", required_argument, 0, 'p'},
@@ -500,7 +599,7 @@ void parseOptions(
         char *subopts;
         char *value;
 
-        c = getopt_long(argc, argv, "hqedPVDBa:i:o:k:p:w:b:c:m:",
+        c = getopt_long(argc, argv, "hqedPVDBa:i:t:o:k:p:w:b:c:m:",
                         long_options, &option_index);
         if (c == -1)
             break;
@@ -536,6 +635,19 @@ void parseOptions(
         case 'P':
             st->optSt.getPassFromPrompt = true;
             st->optSt.passWordGiven = true;
+            break;
+        case 't':
+            if (optarg[0] == '-' && strlen(optarg) == 2) {
+                fprintf(stderr, "Option -t requires an argument\n");
+                errflg++;
+                break;
+            } else {
+				st->optSt.useThreads = true;
+				st->cryptSt.threadNumber = atol(optarg);
+				if(st->cryptSt.threadNumber == 0) {
+					st->cryptSt.threadNumber = get_nprocs_conf();
+				}
+			}
             break;
         case 'i':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
@@ -708,6 +820,7 @@ void parseOptions(
                 errflg++;
                 break;
             } else {
+                DDFREE(free,st->cryptSt.encAlgorithm);
                 st->cryptSt.encAlgorithm = strdup(optarg);
                 if (st->cryptSt.encAlgorithm == NULL) {
                     PRINT_SYS_ERROR(errno);
@@ -716,6 +829,14 @@ void parseOptions(
 
                 if(strcmp(st->cryptSt.encAlgorithm,"null") == 0) {
                     st->cryptSt.evpCipher = EVP_enc_null();
+                } else if (strcmp(st->cryptSt.encAlgorithm,"list-supported") == 0) {
+                    st->optSt.listSupportedCiphers = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, st);
+                    exit(EXIT_SUCCESS);
+                } else if (strcmp(st->cryptSt.encAlgorithm,"list-all") == 0) {
+                    st->optSt.listAllCiphers = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, st);
+                    exit(EXIT_SUCCESS);
                 } else {
                     st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
                     if (!st->cryptSt.evpCipher) {
@@ -742,10 +863,22 @@ void parseOptions(
                     exit(EXIT_FAILURE);
                 }
 
-                st->cryptSt.evpDigest = EVP_get_digestbyname(st->cryptSt.mdAlgorithm);
-                if (!st->cryptSt.evpDigest) {
-                    fprintf(stderr, "Could not load digest: %s\n", st->cryptSt.mdAlgorithm);
-                    exit(EXIT_FAILURE);
+                if(strcmp(st->cryptSt.mdAlgorithm,"null") == 0) {
+                    st->cryptSt.evpDigest = EVP_md_null();
+                } else if(strcmp(st->cryptSt.mdAlgorithm,"list-supported") == 0) {
+                    st->optSt.listSupportedDigests = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
+                    exit(EXIT_SUCCESS);
+                } else if(strcmp(st->cryptSt.mdAlgorithm,"list-all") == 0) {
+                    st->optSt.listAllDigests = true;
+                    OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
+                    exit(EXIT_SUCCESS);
+                } else {
+                    st->cryptSt.evpDigest = EVP_get_digestbyname(st->cryptSt.mdAlgorithm);
+                    if (!st->cryptSt.evpDigest) {
+                        fprintf(stderr, "Could not load digest: %s\n", st->cryptSt.mdAlgorithm);
+                        exit(EXIT_FAILURE);
+                    }
                 }
 
                 st->optSt.mdAlgorithmGiven = true;
