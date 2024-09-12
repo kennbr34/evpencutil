@@ -1,9 +1,9 @@
 #!/bin/bash
 
 BUFFER=`echo $(echo $RANDOM | cut -b -4)b`
-BUFFER=1m
+#BUFFER=1m
 COUNT=$(echo $RANDOM | cut -b -2)
-BINPATH="./bin/evpencutil-cli -w N=1024 -t 1 -b file_buffer=$BUFFER"
+BINPATH="./bin/evpencutil-cli -w N=1024 -t 0 -b file_buffer=$BUFFER"
 
 echo "Testing with $COUNT kilobytes and $BUFFER buffer"
 

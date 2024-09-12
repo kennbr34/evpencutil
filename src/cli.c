@@ -20,8 +20,9 @@ int main(int argc, char *argv[])
     cryptStGlobal = &st.cryptSt;
 
 #if OPENSSL_VERSION_MAJOR >= 3
-    OSSL_PROVIDER_load(NULL, "legacy");
-    OSSL_PROVIDER_load(NULL, "default");
+    typedef struct ossl_provider_st OSSL_PROVIDER;
+    OSSL_PROVIDER *legacy = OSSL_PROVIDER_load(NULL, "legacy");
+    OSSL_PROVIDER *dfault = OSSL_PROVIDER_load(NULL, "default");
 #endif
 
     OpenSSL_add_all_algorithms();
@@ -64,6 +65,27 @@ int main(int argc, char *argv[])
     int waitStatus = 0;
 
     wait(&waitStatus);
+    
+    DDFREE(free,st.cryptSt.encAlgorithm);
+    
+    DDFREE(free,st.cryptSt.mdAlgorithm);
+    
+    DDFREE(free,st.fileNameSt.outputFileName);
+    
+    DDFREE(free,st.fileNameSt.inputFileName);
+    
+    DDFREE(free,st.cryptSt.evpKey);
+    
+    DDFREE(free,st.cryptSt.evpSalt);
+    
+    DDFREE(free,st.cryptSt.hmacKey);
+    
+    #if OPENSSL_VERSION_MAJOR >= 3
+    DDFREE(OSSL_PROVIDER_unload,legacy);
+    DDFREE(OSSL_PROVIDER_unload,dfault);
+    #endif
+    
+    OPENSSL_cleanup();
     
     if (WIFEXITED(waitStatus)) {
         return WEXITSTATUS(waitStatus);

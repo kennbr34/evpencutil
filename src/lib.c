@@ -310,7 +310,7 @@ void cleanUpBuffers(void)
 
     OPENSSL_cleanse(cryptStGlobal->keyFileHash, sizeof(cryptStGlobal->keyFileHash));
 
-    free(cryptStGlobal);
+    DDFREE(free,cryptStGlobal);
 }
 
 FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
@@ -351,9 +351,7 @@ FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
 	        exit(EXIT_FAILURE);
 	    }
 	}
-    if (st->cryptSt.encAlgorithm != NULL) {
-        free(st->cryptSt.encAlgorithm);
-    }
+    DDFREE(free,st->cryptSt.encAlgorithm);
     st->cryptSt.encAlgorithm = strdup(token);
 #ifdef gui
     gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), 0, st->cryptSt.encAlgorithm);
@@ -373,7 +371,7 @@ FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     if (st->cryptSt.mdAlgorithm != NULL) {
-        free(st->cryptSt.mdAlgorithm);
+        DDFREE(free,st->cryptSt.mdAlgorithm);
     }
     st->cryptSt.mdAlgorithm = strdup(token);
 
@@ -465,7 +463,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
     }
     memcpy(paddedPass, paddedPassTmp, sizeof(*paddedPass) * MAX_PASS_SIZE);
     OPENSSL_cleanse(paddedPassTmp, sizeof(*paddedPassTmp) * MAX_PASS_SIZE);
-    free(paddedPassTmp);
+    DDFREE(free,paddedPassTmp);
     paddedPassTmp = NULL;
 
     int nread = 0;
@@ -496,7 +494,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
             (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
         }
         OPENSSL_cleanse(pass, sizeof(*pass) * nread);
-        free(pass);
+        DDFREE(free,pass);
         pass = NULL;
         fprintf(stderr, "\nPassword was too large\n");
         remove(st->fileNameSt.outputFileName);
@@ -519,7 +517,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
         paddedPass[i] = pass[i];
 
     OPENSSL_cleanse(pass, sizeof(*pass) * nread);
-    free(pass);
+    DDFREE(free,pass);
     pass = NULL;
 
     return paddedPass;
@@ -822,6 +820,7 @@ void parseOptions(
                 errflg++;
                 break;
             } else {
+                DDFREE(free,st->cryptSt.encAlgorithm);
                 st->cryptSt.encAlgorithm = strdup(optarg);
                 if (st->cryptSt.encAlgorithm == NULL) {
                     PRINT_SYS_ERROR(errno);

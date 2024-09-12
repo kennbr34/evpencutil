@@ -200,6 +200,15 @@ struct dataStruct {
     { \
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
     }
+    
+//Double-Free/Dangling-Pointer-free cleanup function wrapper for free(), EVP_CIPHER_CTX_free(), etc.
+#define DDFREE(freeFunc, ptr) do { \
+    if ((ptr) != NULL) { \
+        freeFunc(ptr); \
+        (ptr) = NULL; \
+    } \
+} while (0)
+
 #ifndef gui
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);

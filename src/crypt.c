@@ -153,6 +153,8 @@ void *thread_decrypt_chunk(void *arg) {
                 remove(data->st.fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
+            
+            DDFREE(free,paddingArray);
         }
     }
     pthread_mutex_unlock(data->cryptoMutex);
@@ -206,19 +208,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     pthread_t threads[st->cryptSt.threadNumber];
     thread_data_t thread_data[st->cryptSt.threadNumber];
     pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER, cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
-    
-    for(int i = 0; i < st->cryptSt.threadNumber; i++) {
-	    thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
-	    if(thread_data[i].evp_ctx == NULL) {
-			ERR_print_errors_fp(stderr);
-			exit(EXIT_FAILURE);
-		}
-		if(!EVP_CIPHER_CTX_init(thread_data[i].evp_ctx)) {
-			ERR_print_errors_fp(stderr);
-			exit(EXIT_FAILURE);
-		}
-		thread_data[i].md_ctx = EVP_MD_CTX_new();
-	}
 
     while (remainingBytes) {
         
@@ -234,11 +223,16 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
             
             pthread_mutex_lock(&cryptoMutex);
-            if (!loopIterations) {
-                ERR_clear_error();
-	            EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx);
-	            EVP_MD_CTX_reset(thread_data[i].md_ctx);
-	        }
+            thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
+            if(thread_data[i].evp_ctx == NULL) {
+                ERR_print_errors_fp(stderr);
+                exit(EXIT_FAILURE);
+            }
+            if(!EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx)) {
+                ERR_print_errors_fp(stderr);
+                exit(EXIT_FAILURE);
+            }
+            thread_data[i].md_ctx = EVP_MD_CTX_new();
                                         
             EVP_EncryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
@@ -277,6 +271,8 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 memset(paddingArray, paddingAmount, sizeof(paddingAmount) * paddingAmount);
     
                 memcpy(inBuffer + amountReadLast, paddingArray, sizeof(*paddingArray) * paddingAmount);
+                
+                DDFREE(free,paddingArray);
             }
     
             } else {
@@ -314,6 +310,18 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
+            
+            pthread_mutex_lock(&cryptoMutex);
+            DDFREE(free,thread_data[i].outBuffer);
+
+            DDFREE(free,thread_data[i].inBuffer);
+            
+            DDFREE(free,thread_data[i].macBuffer);
+            
+            DDFREE(EVP_CIPHER_CTX_free,thread_data[i].evp_ctx);
+            
+            DDFREE(EVP_MD_CTX_free,thread_data[i].md_ctx);
+            pthread_mutex_unlock(&cryptoMutex);
         }
         
         #ifdef gui
@@ -345,12 +353,13 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 #endif
     }
     pthread_mutex_destroy(&fileMutex);
+    pthread_mutex_destroy(&cryptoMutex);
 
     OPENSSL_cleanse(inBuffer, sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
     OPENSSL_cleanse(outBuffer, sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
-    free(inBuffer);
-    free(outBuffer);
+    DDFREE(free,inBuffer);
+    DDFREE(free,outBuffer);
 }
 
 void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st)
@@ -389,19 +398,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     thread_data_t thread_data[st->cryptSt.threadNumber];
     pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER, cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
     
-    for(int i = 0; i < st->cryptSt.threadNumber; i++) {
-	    thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
-	    if(thread_data[i].evp_ctx == NULL) {
-			ERR_print_errors_fp(stderr);
-			exit(EXIT_FAILURE);
-		}
-		if(!EVP_CIPHER_CTX_init(thread_data[i].evp_ctx)) {
-			ERR_print_errors_fp(stderr);
-			exit(EXIT_FAILURE);
-		}
-		thread_data[i].md_ctx = EVP_MD_CTX_new();
-	}
-    
     while (remainingBytes) {
         
         activeThreads = 0;
@@ -409,11 +405,17 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
             
             pthread_mutex_lock(&cryptoMutex);
-            if (!loopIterations) {
-                ERR_clear_error();
-	            EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx);
-	            EVP_MD_CTX_reset(thread_data[i].md_ctx);
-	        }
+            
+            thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
+            if(thread_data[i].evp_ctx == NULL) {
+                ERR_print_errors_fp(stderr);
+                exit(EXIT_FAILURE);
+            }
+            if(!EVP_CIPHER_CTX_reset(thread_data[i].evp_ctx)) {
+                ERR_print_errors_fp(stderr);
+                exit(EXIT_FAILURE);
+            }
+            thread_data[i].md_ctx = EVP_MD_CTX_new();
 
             EVP_DecryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(thread_data[i].evp_ctx);
@@ -495,6 +497,18 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
+            
+            pthread_mutex_lock(&cryptoMutex);
+            DDFREE(free,thread_data[i].outBuffer);
+
+            DDFREE(free,thread_data[i].inBuffer);
+            
+            DDFREE(free,thread_data[i].macBuffer);
+            
+            DDFREE(EVP_CIPHER_CTX_free,thread_data[i].evp_ctx);
+            
+            DDFREE(EVP_MD_CTX_free,thread_data[i].md_ctx);
+            pthread_mutex_unlock(&cryptoMutex);
         }
         
 #ifdef gui
@@ -517,14 +531,14 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     }
     pthread_mutex_destroy(&fileMutex);
 
-    EVP_CIPHER_CTX_free(evp_ctx);
-    EVP_MD_CTX_free(md_ctx);
+    DDFREE(EVP_CIPHER_CTX_free,evp_ctx);
+    DDFREE(EVP_MD_CTX_free,md_ctx);
 
     OPENSSL_cleanse(inBuffer, sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
     OPENSSL_cleanse(outBuffer, sizeof(*outBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
 
-    free(inBuffer);
-    free(outBuffer);
+    DDFREE(free,inBuffer);
+    DDFREE(free,outBuffer);
 }
 
 void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
@@ -604,9 +618,9 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 #endif
     }
     EVP_DigestFinal_ex(ctx, st->cryptSt.keyFileHash, NULL);
-    EVP_MD_CTX_free(ctx);
+    DDFREE(EVP_MD_CTX_free,ctx);
     OPENSSL_cleanse(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
-    free(keyFileHashBuffer);
+    DDFREE(free,keyFileHashBuffer);
 }
 
 void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
@@ -669,8 +683,8 @@ void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 #endif
     }
     HMAC_Final(ctx, st->cryptSt.generatedMAC, (unsigned int *)&fileSize);
-    HMAC_CTX_free(ctx);
-    free(genAuthBuffer);
+    DDFREE(HMAC_CTX_free,ctx);
+    DDFREE(free,genAuthBuffer);
 }
 
 void genChunkKey(struct dataStruct *st)
@@ -716,7 +730,7 @@ void genChunkKey(struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
 
-    EVP_PKEY_CTX_free(pctx);
+    DDFREE(EVP_PKEY_CTX_free,pctx);
 }
 
 void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize)
@@ -767,7 +781,7 @@ void genHMACKey(struct dataStruct *st, uint8_t *lastChunk, uint32_t chunkSize)
         exit(EXIT_FAILURE);
     }
 
-    EVP_PKEY_CTX_free(pctx);
+    DDFREE(EVP_PKEY_CTX_free,pctx);
 }
 
 void genPassTag(struct dataStruct *st)
@@ -838,7 +852,7 @@ void genEvpKey(struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
 
-    EVP_PKEY_CTX_free(pctx);
+    DDFREE(EVP_PKEY_CTX_free,pctx);
 }
 
 void HKDFKeyFile(struct dataStruct *st)
@@ -889,7 +903,7 @@ void HKDFKeyFile(struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
 
-    EVP_PKEY_CTX_free(pctx);
+    DDFREE(EVP_PKEY_CTX_free,pctx);
 }
 
 void genEvpSalt(struct dataStruct *st)
