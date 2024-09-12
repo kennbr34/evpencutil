@@ -19,6 +19,7 @@ typedef struct {
     uint8_t cipherBlockSize;
     EVP_CIPHER_CTX *evp_ctx;
     EVP_MD_CTX *md_ctx;
+    HMAC_CTX *mac_ctx;
     uint8_t *macBuffer;
     uint8_t *hmacKey;
     uint8_t *evpKey;
@@ -56,17 +57,17 @@ void *thread_encrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
 
-    EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
-    EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
-    EVP_DigestUpdate(data->md_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
+    HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
+    HMAC_Update(data->mac_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+    HMAC_Update(data->mac_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
         
     if (data->paddingAmount) {
         data->st.cryptSt.fileBufSize += data->paddingAmount;
     }
         
-    EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
+    HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
-    EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
+    HMAC_Final(data->mac_ctx, data->macBuffer, &HMACLengthPtr);
     pthread_mutex_unlock(data->cryptoMutex);
 
     pthread_mutex_lock(data->fileMutex);
@@ -106,12 +107,12 @@ void *thread_decrypt_chunk(void *arg) {
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
     
-    EVP_DigestUpdate(data->md_ctx, &data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
-    EVP_DigestUpdate(data->md_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
-    EVP_DigestUpdate(data->md_ctx, data->inBuffer, sizeof(*data->inBuffer) * data->st.cryptSt.fileBufSize);
-    EVP_DigestUpdate(data->md_ctx, &data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
+    HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
+    HMAC_Update(data->mac_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+    HMAC_Update(data->mac_ctx, data->inBuffer, sizeof(*data->inBuffer) * data->st.cryptSt.fileBufSize);
+    HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
-    EVP_DigestFinal_ex(data->md_ctx, data->macBuffer, &HMACLengthPtr);
+    HMAC_Final(data->mac_ctx, data->macBuffer, &HMACLengthPtr);
     
     if (CRYPTO_memcmp(data->st.cryptSt.fileMAC, data->macBuffer, sizeof(*data->macBuffer) * EVP_MAX_MD_SIZE) != 0) {
         printf("Message authentication failed\n");
@@ -232,12 +233,12 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 ERR_print_errors_fp(stderr);
                 exit(EXIT_FAILURE);
             }
-            thread_data[i].md_ctx = EVP_MD_CTX_new();
+            thread_data[i].mac_ctx = HMAC_CTX_new();
                                         
             EVP_EncryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
     
-            EVP_DigestInit_ex(thread_data[i].md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+            HMAC_Init_ex(thread_data[i].mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
             pthread_mutex_unlock(&cryptoMutex);
     
             if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
@@ -320,7 +321,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             
             DDFREE(EVP_CIPHER_CTX_free,thread_data[i].evp_ctx);
             
-            DDFREE(EVP_MD_CTX_free,thread_data[i].md_ctx);
+            DDFREE(HMAC_CTX_free,thread_data[i].mac_ctx);
             pthread_mutex_unlock(&cryptoMutex);
         }
         
@@ -415,13 +416,13 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 ERR_print_errors_fp(stderr);
                 exit(EXIT_FAILURE);
             }
-            thread_data[i].md_ctx = EVP_MD_CTX_new();
+            thread_data[i].mac_ctx = HMAC_CTX_new();
 
             EVP_DecryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(thread_data[i].evp_ctx);
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
     
-            EVP_DigestInit_ex(thread_data[i].md_ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+            HMAC_Init_ex(thread_data[i].mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
             pthread_mutex_unlock(&cryptoMutex);
             
     #ifdef gui
@@ -507,7 +508,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             
             DDFREE(EVP_CIPHER_CTX_free,thread_data[i].evp_ctx);
             
-            DDFREE(EVP_MD_CTX_free,thread_data[i].md_ctx);
+            DDFREE(HMAC_CTX_free,thread_data[i].mac_ctx);
             pthread_mutex_unlock(&cryptoMutex);
         }
         
