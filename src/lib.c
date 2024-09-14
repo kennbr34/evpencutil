@@ -523,7 +523,6 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
     return paddedPass;
 }
 
-#ifdef gui
 int writeBenchmark(double time, double rate, struct dataStruct *st)
 {
 	FILE *benchmarkFile = NULL;
@@ -546,11 +545,11 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
 		}
 	}
 		
-    fprintf(benchmarkFile, "%s,", st->guiSt.encryptOrDecrypt);
+    fprintf(benchmarkFile, "%s,", st->optSt.encrypt ? "encrypt" : "decrypt");
     fprintf(benchmarkFile, "%s,", st->cryptSt.encAlgorithm);
     fprintf(benchmarkFile, "%s,", st->cryptSt.mdAlgorithm);
-    fprintf(benchmarkFile, "%s,", st->guiSt.fileBufSizeComboBoxText);
-    fprintf(benchmarkFile, "%s,", st->guiSt.authBufSizeComboBoxText);
+    fprintf(benchmarkFile, "%zu,", st->cryptSt.fileBufSize);
+    fprintf(benchmarkFile, "%zu,", st->cryptSt.genAuthBufSize);
     fprintf(benchmarkFile, "%0.2f,", time);
     fprintf(benchmarkFile, rate < 1 ? "%0.2f," : "%f,", rate);
     fprintf(benchmarkFile, "%zu,", st->cryptSt.threadNumber);
@@ -562,7 +561,6 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
 
     return 0;
 }
-#endif
 
 void parseOptions(
     int argc,
@@ -624,7 +622,7 @@ void parseOptions(
             break;
         case 'a':
             st->optSt.benchmarkTime = true;
-            st->miscSt.benchmarkTime = atol(optarg);
+            st->timeSt.benchmarkTime = atol(optarg);
             break;
         case 'V':
             st->optSt.verifyPass = true;

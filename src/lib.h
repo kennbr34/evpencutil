@@ -155,7 +155,7 @@ struct guiStruct {
     double *overallProgressFraction;
 
     GtkWidget *progressBar;
-
+    
     clock_t startTime, endTime;
     double totalTime;
     uint64_t startBytes, endBytes, totalBytes;
@@ -175,6 +175,19 @@ struct headerStruct {
     size_t fileBufSize;
 };
 
+struct timerStruct {
+	clock_t startTime, endTime;
+    double totalTime;
+    uint64_t startBytes, endBytes, totalBytes;
+
+    clock_t startLoop, endLoop;
+    double loopTime;
+
+    double loopRate, averageRate;
+    
+    size_t benchmarkTime;
+};
+
 struct dataStruct {
     struct cryptoStruct cryptSt;
     struct fileNames fileNameSt;
@@ -184,6 +197,7 @@ struct dataStruct {
     struct guiStruct guiSt;
 #endif
     struct headerStruct cryptoHeader;
+    struct timerStruct timeSt;
 };
 
 #define PRINT_SYS_ERROR(errCode) \

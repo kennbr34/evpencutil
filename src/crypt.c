@@ -39,10 +39,8 @@ void *thread_encrypt_chunk(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
     setvbuf(data->outFile, NULL, _IONBF, 0);
     
-    pthread_mutex_lock(data->cryptoMutex);
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
-    
     
     if (!EVP_EncryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize + data->paddingAmount)) {
         fprintf(stderr, "EVP_EncryptUpdate failed\n");
@@ -56,19 +54,20 @@ void *thread_encrypt_chunk(void *arg) {
 
         exit(EXIT_FAILURE);
     }
-
+    
     HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
     HMAC_Update(data->mac_ctx, data->st.cryptSt.passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     HMAC_Update(data->mac_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
-        
+    
+    pthread_mutex_lock(data->cryptoMutex);
     if (data->paddingAmount) {
         data->st.cryptSt.fileBufSize += data->paddingAmount;
     }
+    pthread_mutex_unlock(data->cryptoMutex);
         
     HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptSt.fileBufSize, sizeof(data->st.cryptSt.fileBufSize));
 
     HMAC_Final(data->mac_ctx, data->macBuffer, &HMACLengthPtr);
-    pthread_mutex_unlock(data->cryptoMutex);
 
     pthread_mutex_lock(data->fileMutex);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength, data->outFile, &data->st) != 0) {
@@ -83,8 +82,13 @@ void *thread_encrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     fflush(data->outFile);
-    *(data->bytesWritten) += evpOutputLength;
+    pthread_mutex_unlock(data->fileMutex);
     
+    pthread_mutex_lock(data->cryptoMutex);
+    *(data->bytesWritten) += evpOutputLength;
+    pthread_mutex_unlock(data->cryptoMutex);
+    
+    pthread_mutex_lock(data->fileMutex);
     if (fwriteWErrCheck(data->macBuffer, sizeof(*data->macBuffer), HMACLengthPtr, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write MAC");
@@ -92,10 +96,12 @@ void *thread_encrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     fflush(data->outFile);
-    *(data->bytesWritten) += HMACLengthPtr;
-        
     pthread_mutex_unlock(data->fileMutex);
-
+    
+    pthread_mutex_lock(data->cryptoMutex);
+    *(data->bytesWritten) += HMACLengthPtr;
+    pthread_mutex_unlock(data->cryptoMutex);
+    
     return NULL;
 }
 
@@ -103,7 +109,6 @@ void *thread_decrypt_chunk(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
     setvbuf(data->outFile, NULL, _IONBF, 0);
     
-    pthread_mutex_lock(data->cryptoMutex);
     uint32_t evpOutputLength = 0;
     uint32_t HMACLengthPtr = 0;
     
@@ -114,6 +119,7 @@ void *thread_decrypt_chunk(void *arg) {
 
     HMAC_Final(data->mac_ctx, data->macBuffer, &HMACLengthPtr);
     
+    pthread_mutex_lock(data->cryptoMutex);
     if (CRYPTO_memcmp(data->st.cryptSt.fileMAC, data->macBuffer, sizeof(*data->macBuffer) * EVP_MAX_MD_SIZE) != 0) {
         printf("Message authentication failed\n");
 #ifdef gui
@@ -122,7 +128,8 @@ void *thread_decrypt_chunk(void *arg) {
         remove(data->st.fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    
+    pthread_mutex_unlock(data->cryptoMutex);
+        
     if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->st.cryptSt.fileBufSize)) {
         fprintf(stderr, "EVP_DecryptUpdate failed\n");
         ERR_print_errors_fp(stderr);
@@ -136,6 +143,7 @@ void *thread_decrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     
+    pthread_mutex_lock(data->cryptoMutex);
     uint8_t paddingAmount = 0;
     if (data->st.cryptSt.fileBufSize < data->origFileBufSize) {
         if (data->cipherBlockSize > 1) {
@@ -173,9 +181,13 @@ void *thread_decrypt_chunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     fflush(data->outFile);
-    *(data->bytesWritten) += evpOutputLength;
-        
     pthread_mutex_unlock(data->fileMutex);
+    
+    pthread_mutex_lock(data->cryptoMutex);
+    *(data->bytesWritten) += evpOutputLength;
+    pthread_mutex_unlock(data->cryptoMutex);
+        
+    
 
     return NULL;
 }
@@ -184,8 +196,10 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 {
 #ifdef gui
     *(st->guiSt.progressFraction) = 0.0;
-    struct timespec begin, end;
 #endif
+
+	struct timespec begin, end;
+	st->timeSt.totalTime = 0;
     
     uint64_t bytesWritten = 0, bytesRead = 0, amountReadLast = 0;
     uint64_t remainingBytes = fileSize;
@@ -202,28 +216,22 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
     uint32_t HMACLengthPtr = 0;
 
-#ifdef gui
-    st->guiSt.totalTime = 0;
-#endif
-
     pthread_t threads[st->cryptSt.threadNumber];
     thread_data_t thread_data[st->cryptSt.threadNumber];
     pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER, cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
 
     while (remainingBytes) {
         
-         #ifdef gui
-        clock_gettime(CLOCK_REALTIME, &begin);
-        st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
-
-        st->guiSt.startBytes = bytesWritten;
-        #endif
         
+        clock_gettime(CLOCK_REALTIME, &begin);
+        st->timeSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
+
+        st->timeSt.startBytes = bytesWritten;
+                
         activeThreads = 0;
         
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
             
-            pthread_mutex_lock(&cryptoMutex);
             thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
             if(thread_data[i].evp_ctx == NULL) {
                 ERR_print_errors_fp(stderr);
@@ -234,7 +242,9 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 exit(EXIT_FAILURE);
             }
             thread_data[i].mac_ctx = HMAC_CTX_new();
+            
                                         
+            pthread_mutex_lock(&cryptoMutex);
             EVP_EncryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
     
@@ -299,8 +309,11 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             pthread_create(&threads[i], NULL, thread_encrypt_chunk, &thread_data[i]);
             
             activeThreads++;
+            
+            pthread_mutex_lock(&cryptoMutex);
             genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
             genChunkKey(st);
+            pthread_mutex_unlock(&cryptoMutex);
 
         }
         
@@ -325,33 +338,33 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             pthread_mutex_unlock(&cryptoMutex);
         }
         
-        #ifdef gui
         if (st->optSt.benchmark) {
-			if(st->optSt.benchmarkTime && st->guiSt.totalTime >= st->miscSt.benchmarkTime) {
+			if(st->optSt.benchmarkTime && st->timeSt.totalTime >= st->timeSt.benchmarkTime) {
 				remainingBytes = 0;
 			}
 		}
-        #endif
         
         loopIterations++;
         
         #ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;
+        #endif
 
-        st->guiSt.endBytes = bytesWritten;
-        st->guiSt.totalBytes = st->guiSt.endBytes;
+        st->timeSt.endBytes = bytesWritten;
+        st->timeSt.totalBytes = st->timeSt.endBytes;
 
         clock_gettime(CLOCK_REALTIME, &end);
-        st->guiSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
+        st->timeSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
 
-        st->guiSt.loopTime = st->guiSt.endLoop - st->guiSt.startLoop;
-        st->guiSt.totalTime += st->guiSt.loopTime;
+        st->timeSt.loopTime = st->timeSt.endLoop - st->timeSt.startLoop;
+        st->timeSt.totalTime += st->timeSt.loopTime;
 
-        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
-        sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Encrypting...", dataRate, st->guiSt.totalTime);
-        st->guiSt.averageRate = dataRate;
+        double dataRate = (double)((double)st->timeSt.totalBytes / (double)st->timeSt.totalTime) / (1024 * 1024);
+        #ifdef gui
+        sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Encrypting...", dataRate, st->timeSt.totalTime);
+        #endif
+        st->timeSt.averageRate = dataRate;
 
-#endif
     }
     pthread_mutex_destroy(&fileMutex);
     pthread_mutex_destroy(&cryptoMutex);
@@ -367,8 +380,10 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 {
 #ifdef gui
     *(st->guiSt.progressFraction) = 0.0;
-    struct timespec end;
 #endif
+
+	struct timespec begin, end;
+	st->timeSt.totalTime = 0;
 
     uint64_t bytesWritten = 0, bytesRead = 0, amountReadLast = 0;
     uint64_t remainingBytes = fileSize;
@@ -391,21 +406,19 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
     uint32_t HMACLengthPtr = 0;
 
-#ifdef gui
-    st->guiSt.totalTime = 0;
-#endif
-
     pthread_t threads[st->cryptSt.threadNumber];
     thread_data_t thread_data[st->cryptSt.threadNumber];
     pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER, cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
     
     while (remainingBytes) {
+		
+		clock_gettime(CLOCK_REALTIME, &begin);
+		st->timeSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
+		st->timeSt.startBytes = bytesWritten;
         
         activeThreads = 0;
 
         for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-            
-            pthread_mutex_lock(&cryptoMutex);
             
             thread_data[i].evp_ctx = EVP_CIPHER_CTX_new();
             if(thread_data[i].evp_ctx == NULL) {
@@ -418,20 +431,13 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             }
             thread_data[i].mac_ctx = HMAC_CTX_new();
 
+			pthread_mutex_lock(&cryptoMutex);
             EVP_DecryptInit_ex(thread_data[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
             uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(thread_data[i].evp_ctx);
             EVP_CIPHER_CTX_set_padding(thread_data[i].evp_ctx, 0);
     
             HMAC_Init_ex(thread_data[i].mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
             pthread_mutex_unlock(&cryptoMutex);
-            
-    #ifdef gui
-            struct timespec begin;
-            clock_gettime(CLOCK_REALTIME, &begin);
-            st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
-    
-            st->guiSt.startBytes = bytesWritten;
-    #endif
     
             if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE, inFile, st) != 0) {
                 PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -487,8 +493,11 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             pthread_create(&threads[i], NULL, thread_decrypt_chunk, &thread_data[i]);
             
             activeThreads++;
+            
+            pthread_mutex_lock(&cryptoMutex);
             genHMACKey(st, st->cryptSt.generatedMAC, HMACLengthPtr);
             genChunkKey(st);
+            pthread_mutex_unlock(&cryptoMutex);
         }
         
         for (int i = 0; i < activeThreads; i++) {
@@ -512,25 +521,28 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             pthread_mutex_unlock(&cryptoMutex);
         }
         
-#ifdef gui
+		#ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;
+        #endif
 
-        st->guiSt.endBytes = bytesWritten;
-        st->guiSt.totalBytes = st->guiSt.endBytes;
+        st->timeSt.endBytes = bytesWritten;
+        st->timeSt.totalBytes = st->timeSt.endBytes;
 
         clock_gettime(CLOCK_REALTIME, &end);
-        st->guiSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
+        st->timeSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
 
-        st->guiSt.loopTime = st->guiSt.endLoop - st->guiSt.startLoop;
-        st->guiSt.totalTime += st->guiSt.loopTime;
+        st->timeSt.loopTime = st->timeSt.endLoop - st->timeSt.startLoop;
+        st->timeSt.totalTime += st->timeSt.loopTime;
 
-        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
-        sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Decrypting...", dataRate, st->guiSt.totalTime);
-        st->guiSt.averageRate = dataRate;
-#endif
+        double dataRate = (double)((double)st->timeSt.totalBytes / (double)st->timeSt.totalTime) / (1024 * 1024);
+        #ifdef gui
+        sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Decrypting...", dataRate, st->timeSt.totalTime);
+        #endif
+        st->timeSt.averageRate = dataRate;
         loopIterations++;
     }
     pthread_mutex_destroy(&fileMutex);
+    pthread_mutex_destroy(&cryptoMutex);
 
     DDFREE(EVP_CIPHER_CTX_free,evp_ctx);
     DDFREE(EVP_MD_CTX_free,md_ctx);

@@ -38,11 +38,9 @@ int workThread(char action, struct dataStruct *st)
 
     uint64_t fileSize = 0;
 
-    #ifdef gui
     struct timespec begin;
 	clock_gettime(CLOCK_REALTIME, &begin);
-    st->guiSt.startTime = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
-    #endif
+    st->timeSt.startTime = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
 
     if (action == 'e') {
         #ifdef gui
@@ -254,18 +252,16 @@ int workThread(char action, struct dataStruct *st)
     #ifdef gui
     if (action == 'e') {
         sprintf(st->guiSt.statusMessage, "File encrypted... %0.2fs elapsed,%0.2f MB/s", st->guiSt.totalTime, st->guiSt.averageRate);
-        if(st->optSt.benchmark) {
-            writeBenchmark(st->guiSt.totalTime,st->guiSt.averageRate,st);
-        }
         *(st->guiSt.overallProgressFraction) = 1;
     } else if (action == 'd') {
         sprintf(st->guiSt.statusMessage, "File decrypted... %0.2fs elapsed,%0.2f MB/s", st->guiSt.totalTime, st->guiSt.averageRate);
-        if(st->optSt.benchmark) {
-            writeBenchmark(st->guiSt.totalTime,st->guiSt.averageRate,st);
-        }
         *(st->guiSt.overallProgressFraction) = 1;
     }
     #endif
+    
+    if(st->optSt.benchmark) {
+		writeBenchmark(st->timeSt.totalTime,st->timeSt.averageRate,st);
+	}
 
     /*Use SIGCONT so that calling process isn't terminated*/
     if (st->optSt.quitWhenDone) {
