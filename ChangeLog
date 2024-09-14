@@ -1,3 +1,9 @@
+0.3.0
+
+Refactored code to try to multi-thread it
+Fixed major mistake with message authentication
+Added benchmarking and testing improvements
+
 0.2.5
 
 Added ability to specify "null" cipher for testing
