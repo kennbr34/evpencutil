@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <assert.h>
 
 typedef struct {
     uint8_t *inBuffer;
@@ -32,6 +33,7 @@ typedef struct {
     uint64_t fileBufSize;
     uint32_t HMACLengthPtr;
     pthread_mutex_t *cryptoMutex;
+    pthread_mutex_t *fileMutex;
     struct dataStruct st;
     #ifdef gui
     struct guiStruct guiSt;
@@ -40,11 +42,16 @@ typedef struct {
 
 void *encryptChunk(void *arg) {
     chunk_data_t *data = (chunk_data_t *)arg;
-    pthread_mutex_lock(data->cryptoMutex);
-    setbuf(data->outFile, NULL);
+    
+    assert(data->evp_ctx != NULL);
+    assert(data->inBuffer != NULL);
+    assert(data->outBuffer != NULL);
+    //assert(data->fileBufSize > 0);
+    //assert(data->paddingAmount >= 0 && data->paddingAmount <= EVP_MAX_BLOCK_LENGTH);
     
     uint32_t evpOutputLength = 0;
     
+    pthread_mutex_lock(data->cryptoMutex);
     if (!EVP_EncryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->fileBufSize + data->paddingAmount)) {
         fprintf(stderr, "EVP_EncryptUpdate failed\n");
         ERR_print_errors_fp(stderr);
@@ -61,21 +68,17 @@ void *encryptChunk(void *arg) {
     HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
     HMAC_Update(data->mac_ctx, data->passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     HMAC_Update(data->mac_ctx, data->outBuffer, sizeof(*data->outBuffer) * evpOutputLength);
-    pthread_mutex_unlock(data->cryptoMutex);
     
-    pthread_mutex_lock(data->cryptoMutex);
     if (data->paddingAmount) {
         data->fileBufSize += data->paddingAmount;
     }
-    pthread_mutex_unlock(data->cryptoMutex);
     
-    pthread_mutex_lock(data->cryptoMutex);    
     HMAC_Update(data->mac_ctx, (const unsigned char *)&data->fileBufSize, sizeof(data->fileBufSize));
 
     HMAC_Final(data->mac_ctx, data->macBuffer, &data->HMACLengthPtr);
-    pthread_mutex_unlock(data->cryptoMutex);
+	pthread_mutex_unlock(data->cryptoMutex);
 
-    pthread_mutex_lock(data->cryptoMutex);
+	pthread_mutex_lock(data->fileMutex);
     if (fwriteWErrCheck(data->outBuffer, sizeof(*data->outBuffer), evpOutputLength, data->outFile, &data->st) != 0) {
         PRINT_SYS_ERROR(data->st.miscSt.returnVal);
         PRINT_ERROR("Could not write file for encryption/decryption");
@@ -98,20 +101,24 @@ void *encryptChunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     fflush(data->outFile);
+    pthread_mutex_unlock(data->fileMutex);
     
     data->bytesWritten += data->HMACLengthPtr;
-    pthread_mutex_unlock(data->cryptoMutex);
-    
+	
     return NULL;
 }
 
 void *decryptChunk(void *arg) {
     chunk_data_t *data = (chunk_data_t *)arg;
-    pthread_mutex_lock(data->cryptoMutex);
-    setbuf(data->outFile, NULL);
     
     uint32_t evpOutputLength = 0;
     
+    assert(data->mac_ctx != NULL);
+    assert(&data->st.cryptoHeader != NULL);
+    assert(data->passKeyedHash != NULL);
+    assert(data->inBuffer != NULL);
+    
+    pthread_mutex_lock(data->cryptoMutex);
     HMAC_Update(data->mac_ctx, (const unsigned char *)&data->st.cryptoHeader, sizeof(data->st.cryptoHeader));
     HMAC_Update(data->mac_ctx, data->passKeyedHash, sizeof(*data->st.cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
     HMAC_Update(data->mac_ctx, data->inBuffer, sizeof(*data->inBuffer) * data->fileBufSize);
@@ -140,7 +147,9 @@ void *decryptChunk(void *arg) {
 
         exit(EXIT_FAILURE);
     }
+    pthread_mutex_unlock(data->cryptoMutex);
     
+    pthread_mutex_lock(data->fileMutex);
     uint8_t paddingAmount = 0;
     if (data->fileBufSize < data->origFileBufSize) {
         if (data->cipherBlockSize > 1) {
@@ -176,9 +185,9 @@ void *decryptChunk(void *arg) {
         exit(EXIT_FAILURE);
     }
     fflush(data->outFile);
+    pthread_mutex_unlock(data->fileMutex);
     
     data->bytesWritten += evpOutputLength;
-    pthread_mutex_unlock(data->cryptoMutex);
 
     return NULL;
 }
@@ -208,16 +217,20 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     uint32_t HMACLengthPtr = 0;
 
     pthread_t threads[st->cryptSt.threadNumber];
-    chunk_data_t chunkData[st->cryptSt.threadNumber];
+    //chunk_data_t chunkData[st->cryptSt.threadNumber];
+    chunk_data_t *chunkData = malloc(st->cryptSt.threadNumber * sizeof(chunk_data_t));
+    if (chunkData == NULL) {
+        fprintf(stderr, "Failed to allocate memory for chunkData\n");
+        exit(EXIT_FAILURE);
+    }
     pthread_mutex_t cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
     
     for(int i = 0; i < st->cryptSt.threadNumber; i++) {
         chunkData[i].cryptoMutex = &cryptoMutex;
-        chunkData[i].cryptoMutex = &cryptoMutex;
+        chunkData[i].fileMutex = &fileMutex;
     }
     
-    uint32_t activeThreads = 0;
-
     while (remainingBytes) {
         
         
@@ -225,10 +238,12 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         st->timeSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
 
         st->timeSt.startBytes = bytesWritten;
+        
+        uint32_t initializedThreads = 0;
                         
-        for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-            
-            pthread_mutex_lock(&cryptoMutex);
+        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
+			
+			pthread_mutex_lock(&cryptoMutex);           
             chunkData[i].evp_ctx = EVP_CIPHER_CTX_new();
             if(chunkData[i].evp_ctx == NULL) {
                 ERR_print_errors_fp(stderr);
@@ -241,13 +256,15 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             }
             chunkData[i].mac_ctx = HMAC_CTX_new();
                                         
-            EVP_EncryptInit_ex(chunkData[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
+            if(!EVP_EncryptInit_ex(chunkData[i].evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey)) {
+				ERR_print_errors_fp(stderr);
+                exit(EXIT_FAILURE);
+            }
             EVP_CIPHER_CTX_set_padding(chunkData[i].evp_ctx, 0);
     
             HMAC_Init_ex(chunkData[i].mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
             pthread_mutex_unlock(&cryptoMutex);
-    
-            pthread_mutex_lock(&cryptoMutex);
+            
             if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
                 PRINT_SYS_ERROR(st->miscSt.returnVal);
                 PRINT_ERROR("Could not read file for encryption/decryption");
@@ -259,15 +276,11 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     
             amountReadLast = st->miscSt.freadAmt;
             bytesRead += amountReadLast;
-            pthread_mutex_unlock(&cryptoMutex);
             
-            pthread_mutex_lock(&cryptoMutex);
             uint8_t paddingAmount = 0;
             
             uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(chunkData[i].evp_ctx);
-            pthread_mutex_unlock(&cryptoMutex);
             
-            pthread_mutex_lock(&cryptoMutex);
             if (amountReadLast < st->cryptSt.fileBufSize) {
                 remainingBytes = 0;
                 st->cryptSt.fileBufSize = amountReadLast;
@@ -289,18 +302,14 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             } else {
                 remainingBytes -= st->cryptSt.fileBufSize;
             }
-            pthread_mutex_unlock(&cryptoMutex);
             
-            pthread_mutex_lock(&cryptoMutex);
             chunkData[i].inBuffer = malloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH);
             memcpy(chunkData[i].inBuffer, inBuffer, st->cryptSt.fileBufSize + paddingAmount);
             chunkData[i].outBuffer = malloc(st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH);
             chunkData[i].macBuffer = malloc(EVP_MAX_MD_SIZE);
-            pthread_mutex_unlock(&cryptoMutex);
             
-            pthread_mutex_lock(&cryptoMutex);
             chunkData[i].outFile = outFile;
-            chunkData[i].bytesWritten = bytesWritten;
+            chunkData[i].bytesWritten = 0;
             chunkData[i].fileBufSize = st->cryptSt.fileBufSize;
             chunkData[i].HMACLengthPtr = HMACLengthPtr;
             chunkData[i].paddingAmount = paddingAmount;
@@ -311,45 +320,51 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             memcpy(&chunkData[i].st.cryptoHeader,&st->cryptoHeader,sizeof(st->cryptoHeader));
             chunkData[i].passKeyedHash = malloc(sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
             memcpy(chunkData[i].passKeyedHash,st->cryptSt.passKeyedHash,sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
-            pthread_mutex_unlock(&cryptoMutex);
-
+			
+			initializedThreads++;
         }
         
-        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
-            pthread_create(&threads[i], NULL, encryptChunk, &chunkData[i]);
-            
-            pthread_mutex_lock(&cryptoMutex);
-            bytesWritten += chunkData[i].bytesWritten;
-            HMACLengthPtr = chunkData[i].HMACLengthPtr;
-            pthread_mutex_unlock(&cryptoMutex);
-            
-            //pthread_mutex_lock(&cryptoMutex);
-            //genHMACKey(st, chunkData[i].macBuffer, HMACLengthPtr);
-            //genChunkKey(st);
-            //pthread_mutex_unlock(&cryptoMutex);
-            
-            activeThreads++;
-        }
+        uint32_t threadsCreated = 0;
+        for (int i = 0; i < initializedThreads; i++) {
+			
+			assert(chunkData[i].evp_ctx != NULL);
+		    assert(chunkData[i].inBuffer != NULL);
+		    assert(chunkData[i].outBuffer != NULL);
+		    //assert(chunkData[i].fileBufSize > 0);
+		    //assert(chunkData[i].paddingAmount >= 0 && chunkData[i].paddingAmount <= EVP_MAX_BLOCK_LENGTH); 
+			
+            if(pthread_create(&threads[i], NULL, encryptChunk, &chunkData[i]) != 0) {
+				PRINT_SYS_ERROR(errno);
+				PRINT_ERROR("Could not create thread");
+				exit(EXIT_FAILURE);
+			}
+			
+			threadsCreated++;
+		}
         
-        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
-            if(pthread_join(threads[i], NULL)) {
+        
+        for (int i = 0; i < threadsCreated; i++) {
+            if(pthread_join(threads[i], NULL) != 0) {
                 PRINT_SYS_ERROR(errno);
                 PRINT_ERROR("Could not join threads");
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
-                        
+            
+            bytesWritten += chunkData[i].bytesWritten;
+            HMACLengthPtr = chunkData[i].HMACLengthPtr;
+            
             DDFREE(free,chunkData[i].outBuffer);
 
-            DDFREE(free,chunkData[i].inBuffer);
-            
-            DDFREE(free,chunkData[i].macBuffer);
-            
-            DDFREE(free,chunkData[i].passKeyedHash);
-            
-            DDFREE(EVP_CIPHER_CTX_free,chunkData[i].evp_ctx);
-            
-            DDFREE(HMAC_CTX_free,chunkData[i].mac_ctx);
+			DDFREE(free,chunkData[i].inBuffer);
+			
+			DDFREE(free,chunkData[i].macBuffer);
+			
+			DDFREE(free,chunkData[i].passKeyedHash);
+			
+			DDFREE(EVP_CIPHER_CTX_free,chunkData[i].evp_ctx);
+			
+			DDFREE(HMAC_CTX_free,chunkData[i].mac_ctx);
         }
         
         if (st->optSt.benchmark) {
@@ -386,6 +401,8 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
     DDFREE(free,inBuffer);
     DDFREE(free,outBuffer);
+    
+    DDFREE(free,chunkData);
 }
 
 void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st)
@@ -414,16 +431,23 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     uint32_t HMACLengthPtr = 0;
 
     pthread_t threads[st->cryptSt.threadNumber];
-    chunk_data_t chunkData[st->cryptSt.threadNumber];
+    //chunk_data_t chunkData[st->cryptSt.threadNumber];
+    chunk_data_t *chunkData = malloc(st->cryptSt.threadNumber * sizeof(chunk_data_t));
+    if (chunkData == NULL) {
+        fprintf(stderr, "Failed to allocate memory for chunkData\n");
+        exit(EXIT_FAILURE);
+    }
     pthread_mutex_t cryptoMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
     
     for(int i = 0; i < st->cryptSt.threadNumber; i++) {
         chunkData[i].cryptoMutex = &cryptoMutex;
-        chunkData[i].cryptoMutex = &cryptoMutex;
+        chunkData[i].fileMutex = &fileMutex;
     }
-    
-    
-    uint32_t activeThreads = 0;
+        
+    if(st->cryptSt.threadNumber > 1) {
+		setbuf(outFile, NULL);
+	}
     
     while (remainingBytes) {
 		
@@ -431,8 +455,10 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 		st->timeSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
 		st->timeSt.startBytes = bytesWritten;
         
-        for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-            
+        uint32_t initializedThreads = 0;
+        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
+			
+			pthread_mutex_lock(&cryptoMutex);
             chunkData[i].evp_ctx = EVP_CIPHER_CTX_new();
             if(chunkData[i].evp_ctx == NULL) {
                 ERR_print_errors_fp(stderr);
@@ -449,6 +475,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             EVP_CIPHER_CTX_set_padding(chunkData[i].evp_ctx, 0);
     
             HMAC_Init_ex(chunkData[i].mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+            pthread_mutex_unlock(&cryptoMutex);
     
             if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE, inFile, st) != 0) {
                 PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -475,7 +502,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     
                 memcpy(st->cryptSt.fileMAC, inBuffer + st->cryptSt.fileBufSize, EVP_MAX_MD_SIZE);
             }
-            
+
             chunkData[i].inBuffer = calloc((st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH + EVP_MAX_MD_SIZE) * 2,sizeof(*(chunkData[i].inBuffer)));
             if(chunkData[i].inBuffer == NULL) {
                 PRINT_SYS_ERROR(errno);
@@ -500,45 +527,50 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             memcpy(chunkData[i].passKeyedHash,st->cryptSt.passKeyedHash,sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
             chunkData[i].fileMAC = malloc(sizeof(*st->cryptSt.fileMAC) * EVP_MAX_MD_SIZE);
             memcpy(chunkData[i].fileMAC,st->cryptSt.fileMAC,sizeof(*st->cryptSt.fileMAC) * EVP_MAX_MD_SIZE);    
+            
+            initializedThreads++;
         }
         
-        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
-            pthread_create(&threads[i], NULL, decryptChunk, &chunkData[i]);
-            
-            pthread_mutex_lock(&cryptoMutex);
-            bytesWritten += chunkData[i].bytesWritten;
-            HMACLengthPtr = chunkData[i].HMACLengthPtr;
-            pthread_mutex_unlock(&cryptoMutex);
-            
-            //pthread_mutex_lock(&cryptoMutex)
-            //genHMACKey(st, chunkData[i].fileMAC, HMACLengthPtr);
-            //genChunkKey(st);
-            //pthread_mutex_unlock(&cryptoMutex);
-            
-            activeThreads++;
+        uint32_t threadsCreated = 0;
+        for (int i = 0; i < initializedThreads; i++) {
+			
+			assert(chunkData[i].evp_ctx != NULL);
+		    assert(chunkData[i].inBuffer != NULL);
+		    assert(chunkData[i].outBuffer != NULL);
+            if(pthread_create(&threads[i], NULL, decryptChunk, &chunkData[i]) != 0) {
+				PRINT_SYS_ERROR(errno);
+                PRINT_ERROR("Could not create threads");
+                remove(st->fileNameSt.outputFileName);
+                exit(EXIT_FAILURE);
+			}
+			
+			threadsCreated++;
         }
         
-        for (int i = 0; i < st->cryptSt.threadNumber; i++) {
-            if(pthread_join(threads[i], NULL)) {
+        for (int i = 0; i < threadsCreated; i++) {
+           if(pthread_join(threads[i], NULL) != 0) {
                 PRINT_SYS_ERROR(errno);
                 PRINT_ERROR("Could not join threads");
                 remove(st->fileNameSt.outputFileName);
                 exit(EXIT_FAILURE);
             }
             
+            bytesWritten += chunkData[i].bytesWritten;
+            HMACLengthPtr = chunkData[i].HMACLengthPtr;
+            
             DDFREE(free,chunkData[i].outBuffer);
 
-            DDFREE(free,chunkData[i].inBuffer);
-            
-            DDFREE(free,chunkData[i].macBuffer);
-            
-            DDFREE(free,chunkData[i].passKeyedHash);
-            
-            DDFREE(free,chunkData[i].fileMAC);
-            
-            DDFREE(EVP_CIPHER_CTX_free,chunkData[i].evp_ctx);
-            
-            DDFREE(HMAC_CTX_free,chunkData[i].mac_ctx);
+			DDFREE(free,chunkData[i].inBuffer);
+			
+			DDFREE(free,chunkData[i].macBuffer);
+			
+			DDFREE(free,chunkData[i].fileMAC);
+			
+			DDFREE(free,chunkData[i].passKeyedHash);
+			
+			DDFREE(EVP_CIPHER_CTX_free,chunkData[i].evp_ctx);
+			
+			DDFREE(HMAC_CTX_free,chunkData[i].mac_ctx);
         }
         
 		#ifdef gui
@@ -567,6 +599,8 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
     DDFREE(free,inBuffer);
     DDFREE(free,outBuffer);
+    
+    DDFREE(free,chunkData);
 }
 
 void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
