@@ -7,7 +7,7 @@ AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([subdir-objects foreign])
 AC_CONFIG_HEADERS([config.h])
 
-: ${CFLAGS="-g -O0 -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-overlength-strings -Wno-pointer-sign -Wformat-overflow=0 -fsanitize=undefined -fsanitize=thread"}
+: ${CFLAGS="-g -O0 -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-overlength-strings -Wno-pointer-sign -Wformat-overflow=0"}
 
 # Checks for programs.
 AC_PROG_CC

@@ -37,7 +37,7 @@ typedef struct {
     #endif
 } chunk_data_t;
 
-void *encrypt_chunk(void *arg) {
+void *encryptChunk(void *arg) {
     chunk_data_t *data = (chunk_data_t *)arg;
     
     uint32_t evpOutputLength = 0;
@@ -95,7 +95,7 @@ void *encrypt_chunk(void *arg) {
     return NULL;
 }
 
-void *decrypt_chunk(void *arg) {
+void *decryptChunk(void *arg) {
     chunk_data_t *data = (chunk_data_t *)arg;
     uint32_t evpOutputLength = 0;
     
@@ -111,8 +111,8 @@ void *decrypt_chunk(void *arg) {
 #ifdef gui
         strcpy(data->st.guiSt.statusMessage, "Authentication failure");
 #endif
-        //remove(data->st.fileNameSt.outputFileName);
-        //exit(EXIT_FAILURE);
+        remove(data->st.fileNameSt.outputFileName);
+        exit(EXIT_FAILURE);
     }
         
     if (!EVP_DecryptUpdate(data->evp_ctx, data->outBuffer, &evpOutputLength, data->inBuffer, data->fileBufSize)) {
@@ -204,9 +204,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         st->timeSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
 
         st->timeSt.startBytes = bytesWritten;
-                        
-        //for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-            
+                                    
             chunkData.evp_ctx = EVP_CIPHER_CTX_new();
             if(chunkData.evp_ctx == NULL) {
                 ERR_print_errors_fp(stderr);
@@ -279,7 +277,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             chunkData.passKeyedHash = malloc(sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
             memcpy(chunkData.passKeyedHash,st->cryptSt.passKeyedHash,sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
 
-            encrypt_chunk(&chunkData);
+            encryptChunk(&chunkData);
             
             bytesWritten = chunkData.bytesWritten;
             HMACLengthPtr = chunkData.HMACLengthPtr;
@@ -287,16 +285,6 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                         
             genHMACKey(st, chunkData.macBuffer, HMACLengthPtr);
             genChunkKey(st);
-
-        //}
-        
-        //for (int i = 0; i < activeThreads; i++) {
-            //if(pthread_join(threads[i], NULL)) {
-                //PRINT_SYS_ERROR(errno);
-                //PRINT_ERROR("Could not join threads");
-                //remove(st->fileNameSt.outputFileName);
-                //exit(EXIT_FAILURE);
-            //}
             
             DDFREE(free,chunkData.outBuffer);
 
@@ -309,7 +297,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             DDFREE(EVP_CIPHER_CTX_free,chunkData.evp_ctx);
             
             DDFREE(HMAC_CTX_free,chunkData.mac_ctx);
-        //}
+
         
         if (st->optSt.benchmark) {
 			if(st->optSt.benchmarkTime && st->timeSt.totalTime >= st->timeSt.benchmarkTime) {
@@ -379,9 +367,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 		clock_gettime(CLOCK_REALTIME, &begin);
 		st->timeSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
 		st->timeSt.startBytes = bytesWritten;
-        
-        //for (int i = 0; i < st->cryptSt.threadNumber && remainingBytes; i++) {
-            
+                    
             chunkData.evp_ctx = EVP_CIPHER_CTX_new();
             if(chunkData.evp_ctx == NULL) {
                 ERR_print_errors_fp(stderr);
@@ -450,7 +436,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             chunkData.fileMAC = malloc(sizeof(*st->cryptSt.fileMAC) * EVP_MAX_MD_SIZE);
             memcpy(chunkData.fileMAC,st->cryptSt.fileMAC,sizeof(*st->cryptSt.fileMAC) * EVP_MAX_MD_SIZE);
     
-            decrypt_chunk(&chunkData);
+            decryptChunk(&chunkData);
             
             bytesWritten = chunkData.bytesWritten;
             HMACLengthPtr = chunkData.HMACLengthPtr;
@@ -458,15 +444,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                         
             genHMACKey(st, chunkData.fileMAC, HMACLengthPtr);
             genChunkKey(st);
-        //}
-        
-        //for (int i = 0; i < activeThreads; i++) {
-            //if(pthread_join(threads[i], NULL)) {
-                //PRINT_SYS_ERROR(errno);
-                //PRINT_ERROR("Could not join threads");
-                //remove(st->fileNameSt.outputFileName);
-                //exit(EXIT_FAILURE);
-            //}
             
             DDFREE(free,chunkData.outBuffer);
 
@@ -481,7 +458,6 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             DDFREE(EVP_CIPHER_CTX_free,chunkData.evp_ctx);
             
             DDFREE(HMAC_CTX_free,chunkData.mac_ctx);
-        //}
         
 		#ifdef gui
         *(st->guiSt.progressFraction) = (double)bytesWritten / (double)fileSize;

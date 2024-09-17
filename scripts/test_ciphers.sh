@@ -3,7 +3,7 @@
 BUFFER=`echo $(echo $RANDOM | cut -b -4)b`
 BUFFER=1m
 COUNT=$(echo $RANDOM | cut -b -2)
-BINPATH="./bin/evpencutil-cli -w N=1024 -b file_buffer=$BUFFER -t 1"
+BINPATH="./bin/evpencutil-cli -w N=1024 -b file_buffer=$BUFFER"
 
 echo "Testing with $COUNT.0$COUNT megabytes and $BUFFER buffer"
 
