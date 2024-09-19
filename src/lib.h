@@ -223,6 +223,13 @@ struct dataStruct {
     } \
 } while (0)
 
+#define PRINT_BUFFER(buffer, size, message) do { \
+    printf("%s:%d %s\n", __func__, __LINE__, message); \
+    for(int i = 0; i < size; i++) { \
+        printf("%02x", buffer[i] & 0xff); \
+    };printf("\n"); \
+} while (0)
+
 #ifndef gui
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);
