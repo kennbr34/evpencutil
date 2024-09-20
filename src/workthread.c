@@ -6,11 +6,25 @@
 #include <time.h>
 #include <unistd.h>
 
+struct dataStruct *dataStGlobal = NULL;
+
+void segfault_handler(int sig) {
+    fprintf(stderr, "Child process encountered a segmentation fault (signal: %d).\n", sig);
+    #ifdef gui
+    strcpy(dataStGlobal->guiSt.statusMessage, "Program crashed...");
+    #endif
+    _exit(EXIT_FAILURE);  // Exit the child process immediately
+}
+
 int workThread(char action, struct dataStruct *st)
 {
     pid_t p = fork();
     if (p)
         return 0;
+        
+    signal(SIGSEGV, segfault_handler);  // Handle segmentation fault
+    signal(SIGABRT, segfault_handler);  // Handle aborts
+    signal(SIGFPE, segfault_handler);   // Handle floating-point errors
 
     FILE *inFile;
 

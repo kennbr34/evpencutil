@@ -197,6 +197,8 @@ struct dataStruct {
     struct timerStruct timeSt;
 };
 
+extern struct dataStruct *dataStGlobal;
+
 #define PRINT_SYS_ERROR(errCode) \
     { \
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, strerror(errCode)); \

@@ -10,8 +10,6 @@
 #include <string.h>
 #include <sys/mman.h>
 
-struct cryptoStruct *cryptStGlobal = NULL;
-
 #ifdef gui
 /*Lists available encryption algorithms in OpenSSL's EVP library*/
 void encListCallback(const OBJ_NAME *obj, void *arg)
@@ -308,7 +306,7 @@ int main(int argc, char *argv[])
     signal(SIGCONT, signalHandler);
 
     static struct dataStruct st = {0};
-    cryptStGlobal = &st.cryptSt;
+    dataStGlobal = &st;
 
     st.cryptSt.nFactor = DEFAULT_SCRYPT_N;
     st.cryptSt.pFactor = DEFAULT_SCRYPT_P;

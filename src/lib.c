@@ -9,8 +9,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-extern struct cryptoStruct *cryptStGlobal;
-
 #ifndef gui
 /*Lists available encryption algorithms in OpenSSL's EVP library*/
 void encListCallback(const OBJ_NAME *obj, void *arg)
@@ -299,15 +297,15 @@ void allocateBuffers(struct dataStruct *st)
 
 void cleanUpBuffers(void)
 {
-    OPENSSL_cleanse(cryptStGlobal->evpKey, EVP_MAX_KEY_LENGTH);
-    OPENSSL_cleanse(cryptStGlobal->hmacKey, HMAC_KEY_SIZE);
+    OPENSSL_cleanse(dataStGlobal->cryptSt.evpKey, EVP_MAX_KEY_LENGTH);
+    OPENSSL_cleanse(dataStGlobal->cryptSt.hmacKey, HMAC_KEY_SIZE);
 
-    OPENSSL_cleanse(cryptStGlobal->userPass, strlen(cryptStGlobal->userPass));
-    OPENSSL_cleanse(cryptStGlobal->userPassToVerify, strlen(cryptStGlobal->userPassToVerify));
+    OPENSSL_cleanse(dataStGlobal->cryptSt.userPass, strlen(dataStGlobal->cryptSt.userPass));
+    OPENSSL_cleanse(dataStGlobal->cryptSt.userPassToVerify, strlen(dataStGlobal->cryptSt.userPassToVerify));
 
-    OPENSSL_cleanse(cryptStGlobal->keyFileHash, sizeof(cryptStGlobal->keyFileHash));
+    OPENSSL_cleanse(dataStGlobal->cryptSt.keyFileHash, sizeof(dataStGlobal->cryptSt.keyFileHash));
 
-    DDFREE(free, cryptStGlobal);
+    DDFREE(free, dataStGlobal);
 }
 
 FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)

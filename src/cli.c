@@ -7,8 +7,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-struct cryptoStruct *cryptStGlobal = NULL;
-
 int main(int argc, char *argv[])
 {
     if (argc == 1) {
@@ -17,7 +15,7 @@ int main(int argc, char *argv[])
     }
 
     struct dataStruct st = {0};
-    cryptStGlobal = &st.cryptSt;
+    dataStGlobal = &st;
 
 #if OPENSSL_VERSION_MAJOR >= 3
     typedef struct ossl_provider_st OSSL_PROVIDER;

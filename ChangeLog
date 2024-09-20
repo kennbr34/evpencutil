@@ -1,3 +1,7 @@
+0.3.2
+
+Added signal handlers to detect when the child process has crashed
+
 0.3.1
 
 Refactored back to single-thread
