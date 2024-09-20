@@ -57,8 +57,6 @@ struct cryptoStruct {
 
     char *encAlgorithm;
     char *mdAlgorithm;
-    
-    uint64_t threadNumber;
 };
 
 struct fileNames {
@@ -94,7 +92,6 @@ struct optionsStruct {
     bool quitWhenDone;
     bool encAlgorithmGiven;
     bool mdAlgorithmGiven;
-    bool useThreads;
     bool listAllCiphers;
     bool listSupportedCiphers;
     bool listSupportedDigests;
@@ -155,7 +152,7 @@ struct guiStruct {
     double *overallProgressFraction;
 
     GtkWidget *progressBar;
-    
+
     clock_t startTime, endTime;
     double totalTime;
     uint64_t startBytes, endBytes, totalBytes;
@@ -176,7 +173,7 @@ struct headerStruct {
 };
 
 struct timerStruct {
-	clock_t startTime, endTime;
+    clock_t startTime, endTime;
     double totalTime;
     uint64_t startBytes, endBytes, totalBytes;
 
@@ -184,7 +181,7 @@ struct timerStruct {
     double loopTime;
 
     double loopRate, averageRate;
-    
+
     size_t benchmarkTime;
 };
 
@@ -214,20 +211,30 @@ struct dataStruct {
     { \
         fprintf(stderr, "%s:%s:%d: %s\n", __FILE__, __func__, __LINE__, errMsg); \
     }
-    
-//Double-Free/Dangling-Pointer-free cleanup function wrapper for free(), EVP_CIPHER_CTX_free(), etc.
-#define DDFREE(freeFunc, ptr) do { \
-    if ((ptr) != NULL) { \
-        freeFunc(ptr); \
-        (ptr) = NULL; \
-    } \
-} while (0)
+
+// Double-Free/Dangling-Pointer-free cleanup function wrapper for free(), EVP_CIPHER_CTX_free(), etc.
+#define DDFREE(freeFunc, ptr) \
+    do { \
+        if ((ptr) != NULL) { \
+            freeFunc(ptr); \
+            (ptr) = NULL; \
+        } \
+    } while (0)
+
+#define PRINT_BUFFER(buffer, size, message) \
+    do { \
+        printf("%s:%d %s:\n", __func__, __LINE__, message); \
+        for (int i = 0; i < size; i++) { \
+            printf("%02x", buffer[i] & 0xff); \
+        } \
+        printf("\n"); \
+    } while (0)
 
 #ifndef gui
 void encListCallback(const OBJ_NAME *obj, void *arg);
 void mdListCallback(const OBJ_NAME *obj, void *arg);
 #endif
-char * getCpuName(void);
+char *getCpuName(void);
 size_t getNumCores(void);
 uint8_t isSupportedCipher(uint8_t *cipher);
 uint8_t isSupportedDigest(uint8_t *digest);

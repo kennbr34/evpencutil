@@ -1,14 +1,14 @@
-#include <stdint.h>
-#include <openssl/evp.h>
 #include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <stdint.h>
 #if OPENSSL_VERSION_MAJOR >= 3
 #include <openssl/provider.h>
 #endif
+#include "lib.h"
+#include <gtk/gtk.h>
 #include <signal.h>
 #include <string.h>
-#include <gtk/gtk.h>
 #include <sys/mman.h>
-#include "lib.h"
 
 struct cryptoStruct *cryptStGlobal = NULL;
 
@@ -28,7 +28,7 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 void mdListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
-    
+
     /*Do not list shake128 or shake256 since they will not work*/
     if (!strstr(obj->name, "shake")) {
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox), obj->name);
@@ -98,7 +98,7 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
     st->cryptSt.mdAlgorithm = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.mdAlgorithmComboBox));
 
     st->cryptSt.evpCipher = EVP_get_cipherbyname(st->cryptSt.encAlgorithm);
-    if(strcmp(st->cryptSt.encAlgorithm,"null") == 0) {
+    if (strcmp(st->cryptSt.encAlgorithm, "null") == 0) {
         st->cryptSt.evpCipher = EVP_enc_null();
     } else {
         if (!st->cryptSt.evpCipher) {
@@ -203,7 +203,7 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
             workThread('e', st);
         } else if (strcmp(st->guiSt.encryptOrDecrypt, "decrypt") == 0) {
             strcpy(st->guiSt.statusMessage, "Starting decryption...");
-            //parseCryptoHeader(st);
+            // parseCryptoHeader(st);
             workThread('d', st);
         }
     }
@@ -316,8 +316,6 @@ int main(int argc, char *argv[])
 
     st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
-    
-    st.cryptSt.threadNumber = 1;
 
     /*These must be mapped as shared memory for the worker thread to manipulate their values in the main thread*/
     st.guiSt.statusMessage = mmap(NULL, 256, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -330,10 +328,10 @@ int main(int argc, char *argv[])
 
     allocateBuffers(&st);
 
-    #if OPENSSL_VERSION_MAJOR >= 3
+#if OPENSSL_VERSION_MAJOR >= 3
     OSSL_PROVIDER_load(NULL, "legacy");
     OSSL_PROVIDER_load(NULL, "default");
-    #endif
+#endif
 
     OpenSSL_add_all_algorithms();
 
@@ -372,7 +370,7 @@ int main(int argc, char *argv[])
     GtkWidget *encAlgorithmLabel = gtk_label_new("Encryption Algorithm");
     st.guiSt.encAlgorithmComboBox = gtk_combo_box_text_new();
     OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, &st);
-    
+
     char encAlgorithmToolTipText[] = "\
     Choose which encryption algorithm to use\n\
     Best options: aes-256-ctr or chacha20\n\
@@ -390,7 +388,7 @@ int main(int argc, char *argv[])
     GtkWidget *mdAlgorithmLabel = gtk_label_new("Message Digest Algorithm");
     st.guiSt.mdAlgorithmComboBox = gtk_combo_box_text_new();
     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, &st);
-    
+
     char mdAlgorithmToolTipText[] = "\
     Choose which message digest algorithm to use. This is what will be used by HMAC as the hash\
     for your authentication code, as well as what HKDF will use as a hash for key derivation\n\

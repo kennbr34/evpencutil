@@ -38,8 +38,6 @@ int main(int argc, char *argv[])
 
     st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
-    
-    st.cryptSt.threadNumber = 1;
 
     parseOptions(argc, argv, &st);
 
@@ -65,28 +63,28 @@ int main(int argc, char *argv[])
     int waitStatus = 0;
 
     wait(&waitStatus);
-    
-    DDFREE(free,st.cryptSt.encAlgorithm);
-    
-    DDFREE(free,st.cryptSt.mdAlgorithm);
-    
-    DDFREE(free,st.fileNameSt.outputFileName);
-    
-    DDFREE(free,st.fileNameSt.inputFileName);
-    
-    DDFREE(free,st.cryptSt.evpKey);
-    
-    DDFREE(free,st.cryptSt.evpSalt);
-    
-    DDFREE(free,st.cryptSt.hmacKey);
-    
-    #if OPENSSL_VERSION_MAJOR >= 3
-    DDFREE(OSSL_PROVIDER_unload,legacy);
-    DDFREE(OSSL_PROVIDER_unload,dfault);
-    #endif
-    
+
+    DDFREE(free, st.cryptSt.encAlgorithm);
+
+    DDFREE(free, st.cryptSt.mdAlgorithm);
+
+    DDFREE(free, st.fileNameSt.outputFileName);
+
+    DDFREE(free, st.fileNameSt.inputFileName);
+
+    DDFREE(free, st.cryptSt.evpKey);
+
+    DDFREE(free, st.cryptSt.evpSalt);
+
+    DDFREE(free, st.cryptSt.hmacKey);
+
+#if OPENSSL_VERSION_MAJOR >= 3
+    DDFREE(OSSL_PROVIDER_unload, legacy);
+    DDFREE(OSSL_PROVIDER_unload, dfault);
+#endif
+
     OPENSSL_cleanup();
-    
+
     if (WIFEXITED(waitStatus)) {
         return WEXITSTATUS(waitStatus);
     } else {

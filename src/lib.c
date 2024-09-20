@@ -5,9 +5,9 @@
 #include <openssl/rand.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/sysinfo.h>
 #include <termios.h>
 #include <unistd.h>
-#include <sys/sysinfo.h>
 
 extern struct cryptoStruct *cryptStGlobal;
 
@@ -17,11 +17,11 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
 
-    if(st->optSt.listSupportedCiphers) {
+    if (st->optSt.listSupportedCiphers) {
         if (isSupportedCipher((unsigned char *)obj->name)) {
             printf("%s\n", obj->name);
         }
-    } else if(st->optSt.listAllCiphers) {
+    } else if (st->optSt.listAllCiphers) {
         printf("%s\n", obj->name);
     }
 }
@@ -30,12 +30,12 @@ void encListCallback(const OBJ_NAME *obj, void *arg)
 void mdListCallback(const OBJ_NAME *obj, void *arg)
 {
     struct dataStruct *st = (struct dataStruct *)arg;
-    
-    if(st->optSt.listSupportedDigests) {
+
+    if (st->optSt.listSupportedDigests) {
         if (isSupportedDigest((unsigned char *)obj->name)) {
             printf("%s\n", obj->name);
         }
-    } else if(st->optSt.listAllDigests) {
+    } else if (st->optSt.listAllDigests) {
         printf("%s\n", obj->name);
     }
 }
@@ -44,40 +44,37 @@ void mdListCallback(const OBJ_NAME *obj, void *arg)
 size_t getNumCores(void)
 {
     FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
-    if(cpuInfoFile == NULL) {
+    if (cpuInfoFile == NULL) {
         perror("/proc/cpuinfo");
         fclose(cpuInfoFile);
         return 0;
     }
 
     char cpuInfoLine[256];
-    while(fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile))
-    {
+    while (fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile)) {
         size_t numCores = 0;
-        if(sscanf(cpuInfoLine, "cpu cores : %zu", &numCores) == 1)
-        {
+        if (sscanf(cpuInfoLine, "cpu cores : %zu", &numCores) == 1) {
             fclose(cpuInfoFile);
             return numCores;
         }
     }
 
     fclose(cpuInfoFile);
-    
+
     return 0;
 }
 
-char * getCpuName(void)
+char *getCpuName(void)
 {
     FILE *cpuInfoFile = fopen("/proc/cpuinfo", "r");
-    if(cpuInfoFile == NULL) {
+    if (cpuInfoFile == NULL) {
         perror("/proc/cpuinfo");
         fclose(cpuInfoFile);
         return 0;
     }
 
     char cpuInfoLine[256];
-    while(fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile))
-    {
+    while (fgets(cpuInfoLine, sizeof(cpuInfoLine), cpuInfoFile)) {
         if (strncmp(cpuInfoLine, "model name", 10) == 0) {
             char *colon = strchr(cpuInfoLine, ':');
             if (colon != NULL) {
@@ -88,7 +85,7 @@ char * getCpuName(void)
     }
 
     fclose(cpuInfoFile);
-    
+
     return NULL;
 }
 
@@ -200,9 +197,9 @@ uint64_t fwriteWErrCheck(void *ptr, size_t size, size_t nmemb, FILE *stream, str
 uint64_t getFileSize(const char *filename)
 {
     struct stat st;
-    if(stat(filename, &st) == -1) {
-		return 0;
-	}
+    if (stat(filename, &st) == -1) {
+        return 0;
+    }
 
     /*If file is a FIFO, return the max value possible for type*/
 
@@ -310,7 +307,7 @@ void cleanUpBuffers(void)
 
     OPENSSL_cleanse(cryptStGlobal->keyFileHash, sizeof(cryptStGlobal->keyFileHash));
 
-    DDFREE(free,cryptStGlobal);
+    DDFREE(free, cryptStGlobal);
 }
 
 FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
@@ -340,18 +337,18 @@ FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    
+
     st->cryptSt.evpCipher = EVP_get_cipherbyname(token);
-    if(strcmp(token,"null") == 0) {
-		st->cryptSt.evpCipher = EVP_enc_null();
-	} else {
-	    if (!st->cryptSt.evpCipher) {
-	        fprintf(stderr, "Could not load cipher: %s\n", token);
-	        remove(st->fileNameSt.outputFileName);
-	        exit(EXIT_FAILURE);
-	    }
-	}
-    DDFREE(free,st->cryptSt.encAlgorithm);
+    if (strcmp(token, "null") == 0) {
+        st->cryptSt.evpCipher = EVP_enc_null();
+    } else {
+        if (!st->cryptSt.evpCipher) {
+            fprintf(stderr, "Could not load cipher: %s\n", token);
+            remove(st->fileNameSt.outputFileName);
+            exit(EXIT_FAILURE);
+        }
+    }
+    DDFREE(free, st->cryptSt.encAlgorithm);
     st->cryptSt.encAlgorithm = strdup(token);
 #ifdef gui
     gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox), 0, st->cryptSt.encAlgorithm);
@@ -371,7 +368,7 @@ FILE *parseCryptoHeader(FILE *inFile, struct dataStruct *st)
         exit(EXIT_FAILURE);
     }
     if (st->cryptSt.mdAlgorithm != NULL) {
-        DDFREE(free,st->cryptSt.mdAlgorithm);
+        DDFREE(free, st->cryptSt.mdAlgorithm);
     }
     st->cryptSt.mdAlgorithm = strdup(token);
 
@@ -463,7 +460,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
     }
     memcpy(paddedPass, paddedPassTmp, sizeof(*paddedPass) * MAX_PASS_SIZE);
     OPENSSL_cleanse(paddedPassTmp, sizeof(*paddedPassTmp) * MAX_PASS_SIZE);
-    DDFREE(free,paddedPassTmp);
+    DDFREE(free, paddedPassTmp);
     paddedPassTmp = NULL;
 
     int nread = 0;
@@ -494,7 +491,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
             (void)tcsetattr(fileno(stdin), TCSAFLUSH, &termiosOld);
         }
         OPENSSL_cleanse(pass, sizeof(*pass) * nread);
-        DDFREE(free,pass);
+        DDFREE(free, pass);
         pass = NULL;
         fprintf(stderr, "\nPassword was too large\n");
         remove(st->fileNameSt.outputFileName);
@@ -517,7 +514,7 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
         paddedPass[i] = pass[i];
 
     OPENSSL_cleanse(pass, sizeof(*pass) * nread);
-    DDFREE(free,pass);
+    DDFREE(free, pass);
     pass = NULL;
 
     return paddedPass;
@@ -525,26 +522,25 @@ char *getPass(const char *prompt, char *paddedPass, struct dataStruct *st)
 
 int writeBenchmark(double time, double rate, struct dataStruct *st)
 {
-	FILE *benchmarkFile = NULL;
-	char benchmarkFileName[] = "benchmark.csv";
-	
-	
-	if(!getFileSize(benchmarkFileName)) {
-		benchmarkFile = fopen(benchmarkFileName, "w");
-		if (benchmarkFile == NULL) {
-			PRINT_FILE_ERROR(benchmarkFileName, errno);
-			return 1;
-		}
-		
-		fprintf(benchmarkFile,"Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),Threads,Cores,CPU,\n");
-	} else {
-		benchmarkFile = fopen(benchmarkFileName, "a");
-		if (benchmarkFile == NULL) {
-			PRINT_FILE_ERROR(benchmarkFileName, errno);
-			return 1;
-		}
-	}
-		
+    FILE *benchmarkFile = NULL;
+    char benchmarkFileName[] = "benchmark.csv";
+
+    if (!getFileSize(benchmarkFileName)) {
+        benchmarkFile = fopen(benchmarkFileName, "w");
+        if (benchmarkFile == NULL) {
+            PRINT_FILE_ERROR(benchmarkFileName, errno);
+            return 1;
+        }
+
+        fprintf(benchmarkFile, "Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),CPU,\n");
+    } else {
+        benchmarkFile = fopen(benchmarkFileName, "a");
+        if (benchmarkFile == NULL) {
+            PRINT_FILE_ERROR(benchmarkFileName, errno);
+            return 1;
+        }
+    }
+
     fprintf(benchmarkFile, "%s,", st->optSt.encrypt ? "encrypt" : "decrypt");
     fprintf(benchmarkFile, "%s,", st->cryptSt.encAlgorithm);
     fprintf(benchmarkFile, "%s,", st->cryptSt.mdAlgorithm);
@@ -552,11 +548,9 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
     fprintf(benchmarkFile, "%zu,", st->cryptSt.genAuthBufSize);
     fprintf(benchmarkFile, "%0.2f,", time);
     fprintf(benchmarkFile, rate < 1 ? "%0.2f," : "%f,", rate);
-    fprintf(benchmarkFile, "%zu,", st->cryptSt.threadNumber);
-    fprintf(benchmarkFile, "%zu,", getNumCores());
     char *cpuName = getCpuName();
     fprintf(benchmarkFile, "%s,", cpuName);
-    DDFREE(free,cpuName);
+    DDFREE(free, cpuName);
     fprintf(benchmarkFile, "\n");
 
     fclose(benchmarkFile);
@@ -599,7 +593,7 @@ void parseOptions(
         char *subopts;
         char *value;
 
-        c = getopt_long(argc, argv, "hqedPVDBa:i:t:o:k:p:w:b:c:m:",
+        c = getopt_long(argc, argv, "hqedPVDBa:i:o:k:p:w:b:c:m:",
                         long_options, &option_index);
         if (c == -1)
             break;
@@ -635,19 +629,6 @@ void parseOptions(
         case 'P':
             st->optSt.getPassFromPrompt = true;
             st->optSt.passWordGiven = true;
-            break;
-        case 't':
-            if (optarg[0] == '-' && strlen(optarg) == 2) {
-                fprintf(stderr, "Option -t requires an argument\n");
-                errflg++;
-                break;
-            } else {
-				st->optSt.useThreads = true;
-				st->cryptSt.threadNumber = atol(optarg);
-				if(st->cryptSt.threadNumber == 0) {
-					st->cryptSt.threadNumber = get_nprocs_conf();
-				}
-			}
             break;
         case 'i':
             if (optarg[0] == '-' && strlen(optarg) == 2) {
@@ -820,20 +801,20 @@ void parseOptions(
                 errflg++;
                 break;
             } else {
-                DDFREE(free,st->cryptSt.encAlgorithm);
+                DDFREE(free, st->cryptSt.encAlgorithm);
                 st->cryptSt.encAlgorithm = strdup(optarg);
                 if (st->cryptSt.encAlgorithm == NULL) {
                     PRINT_SYS_ERROR(errno);
                     exit(EXIT_FAILURE);
                 }
 
-                if(strcmp(st->cryptSt.encAlgorithm,"null") == 0) {
+                if (strcmp(st->cryptSt.encAlgorithm, "null") == 0) {
                     st->cryptSt.evpCipher = EVP_enc_null();
-                } else if (strcmp(st->cryptSt.encAlgorithm,"list-supported") == 0) {
+                } else if (strcmp(st->cryptSt.encAlgorithm, "list-supported") == 0) {
                     st->optSt.listSupportedCiphers = true;
                     OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, st);
                     exit(EXIT_SUCCESS);
-                } else if (strcmp(st->cryptSt.encAlgorithm,"list-all") == 0) {
+                } else if (strcmp(st->cryptSt.encAlgorithm, "list-all") == 0) {
                     st->optSt.listAllCiphers = true;
                     OBJ_NAME_do_all(OBJ_NAME_TYPE_CIPHER_METH, encListCallback, st);
                     exit(EXIT_SUCCESS);
@@ -863,13 +844,13 @@ void parseOptions(
                     exit(EXIT_FAILURE);
                 }
 
-                if(strcmp(st->cryptSt.mdAlgorithm,"null") == 0) {
+                if (strcmp(st->cryptSt.mdAlgorithm, "null") == 0) {
                     st->cryptSt.evpDigest = EVP_md_null();
-                } else if(strcmp(st->cryptSt.mdAlgorithm,"list-supported") == 0) {
+                } else if (strcmp(st->cryptSt.mdAlgorithm, "list-supported") == 0) {
                     st->optSt.listSupportedDigests = true;
                     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
                     exit(EXIT_SUCCESS);
-                } else if(strcmp(st->cryptSt.mdAlgorithm,"list-all") == 0) {
+                } else if (strcmp(st->cryptSt.mdAlgorithm, "list-all") == 0) {
                     st->optSt.listAllDigests = true;
                     OBJ_NAME_do_all(OBJ_NAME_TYPE_MD_METH, mdListCallback, st);
                     exit(EXIT_SUCCESS);
@@ -921,15 +902,15 @@ void parseOptions(
         fprintf(stderr, "Cannot read both input file and keyfile from standard input. Must choose only one, or use a FIFO.\n");
         errflg++;
     }
-    
-    if(st->optSt.fileBufSizeGiven && st->optSt.encAlgorithmGiven) {
-		uint8_t cipherBlockSize = EVP_CIPHER_get_block_size(EVP_get_cipherbyname(st->cryptSt.encAlgorithm));
-		
-		if(st->cryptSt.fileBufSize % cipherBlockSize) {
-			fprintf(stderr,"File buffer size (%zu) needs to be a multiple of the cipher block size (%d) if using %s\nReducing to %zu\n", st->cryptSt.fileBufSize, cipherBlockSize, st->cryptSt.encAlgorithm, st->cryptSt.fileBufSize - (st->cryptSt.fileBufSize % cipherBlockSize));
-			makeMultipleOf(&st->cryptSt.fileBufSize, cipherBlockSize);
-		}
-	}
+
+    if (st->optSt.fileBufSizeGiven && st->optSt.encAlgorithmGiven) {
+        uint8_t cipherBlockSize = EVP_CIPHER_get_block_size(EVP_get_cipherbyname(st->cryptSt.encAlgorithm));
+
+        if (st->cryptSt.fileBufSize % cipherBlockSize) {
+            fprintf(stderr, "File buffer size (%zu) needs to be a multiple of the cipher block size (%d) if using %s\nReducing to %zu\n", st->cryptSt.fileBufSize, cipherBlockSize, st->cryptSt.encAlgorithm, st->cryptSt.fileBufSize - (st->cryptSt.fileBufSize % cipherBlockSize));
+            makeMultipleOf(&st->cryptSt.fileBufSize, cipherBlockSize);
+        }
+    }
 
     for (int i = 1; i < argc; i++) {
         OPENSSL_cleanse(argv[i], strlen(argv[i]));

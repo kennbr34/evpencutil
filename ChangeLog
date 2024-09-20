@@ -1,3 +1,8 @@
+0.3.1
+
+Refactored back to single-thread
+Added a few debugging macros
+
 0.3.0
 
 Refactored code to try to multi-thread it
