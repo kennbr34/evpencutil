@@ -415,11 +415,8 @@ uint8_t printSyntax(char *arg)
 \n\t p=num\
 \n\t\t p factor for scrypt to use. Default 1\
 \n-k,--key-file - keyfile to use\
-\n-b,--buffer-sizes - [auth_buffer=],[file_buffer=]\
-\n\t auth_buffer=num[b|k|m]\
-\n\t\t Size of input buffer to use for generating MAC, in bytes, kilobytes, or megabytes\
-\n\t file_buffer=num[b|k|m]\
-\n\t\t Size of encryption/decryption input/output buffers to use in bytes, kilobytes or megabytes\
+\n-b,--buffer-size - num[b|k|m]\
+\n\t Size of input/output buffers to use in bytes, kilobytes or megabytes\
 \n",
            arg);
     printf("\nCopyright (c) 1998-2019 The OpenSSL Project.  All rights reserved.\
@@ -583,7 +580,7 @@ void parseOptions(
             {"key-file", required_argument, 0, 'k'},
             {"password", required_argument, 0, 'p'},
             {"work-factors", required_argument, 0, 'w'},
-            {"buffer-sizes", required_argument, 0, 'b'},
+            {"buffer-size", required_argument, 0, 'b'},
             {"cipher", required_argument, 0, 'c'},
             {"message-digest", required_argument, 0, 'm'},
             {0, 0, 0, 0}};
@@ -749,48 +746,8 @@ void parseOptions(
                 errflg++;
                 break;
             } else {
-                enum {
-                    AUTH_BUFFER = 0,
-                    FILE_BUFFER
-                };
-
-                char *const token[] = {
-                    [AUTH_BUFFER] = "auth_buffer",
-                    [FILE_BUFFER] = "file_buffer",
-                    NULL};
-
-                subopts = optarg;
-                while (*subopts != '\0' && !errflg) {
-                    switch (getsubopt(&subopts, token, &value)) {
-                    case AUTH_BUFFER:
-                        if (value == NULL) {
-                            fprintf(stderr, "Missing value for suboption '%s'\n", token[AUTH_BUFFER]);
-                            errflg = 1;
-                            continue;
-                        }
-
-                        st->optSt.authBufSizeGiven = true;
-                        st->cryptSt.genAuthBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
-                        break;
-                    case FILE_BUFFER:
-                        if (value == NULL) {
-                            fprintf(stderr, "Missing value for "
-                                            "suboption '%s'\n",
-                                    token[FILE_BUFFER]);
-                            errflg = 1;
-                            continue;
-                        }
-
-                        st->optSt.fileBufSizeGiven = true;
-
-                        st->cryptSt.fileBufSize = (atol(value) * getBufSizeMultiple(value));
-                        break;
-                    default:
-                        fprintf(stderr, "No match found for token: /%s/\n", value);
-                        errflg = 1;
-                        break;
-                    }
-                }
+                st->optSt.authBufSizeGiven = true;
+                st->cryptSt.genAuthBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
             }
             break;
         case 'c':

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([EVP-ENC-UTIL], [0.3.3], [kennbr34@gmail.com])
+AC_INIT([EVP-ENC-UTIL], [0.3.4], [kennbr34@gmail.com])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([subdir-objects foreign])
 AC_CONFIG_HEADERS([config.h])

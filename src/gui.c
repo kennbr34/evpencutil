@@ -89,7 +89,6 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
     st->guiSt.passWord = gtk_entry_get_text(GTK_ENTRY(st->guiSt.passwordBox));
     st->guiSt.verificationPass = gtk_entry_get_text(GTK_ENTRY(st->guiSt.passwordVerificationBox));
     st->guiSt.keyFilePath = gtk_entry_get_text(GTK_ENTRY(st->guiSt.keyFileNameBox));
-    st->guiSt.authBufSizeComboBoxText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.authBufSizeComboBox));
     st->guiSt.fileBufSizeComboBoxText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.fileBufSizeComboBox));
 
     st->cryptSt.encAlgorithm = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(st->guiSt.encAlgorithmComboBox));
@@ -135,9 +134,6 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
     st->cryptSt.nFactor = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(st->guiSt.nFactorTextBox));
     st->cryptSt.rFactor = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(st->guiSt.rFactorTextBox));
     st->cryptSt.pFactor = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(st->guiSt.pFactorTextBox));
-
-    st->cryptSt.genAuthBufSize = atol(st->guiSt.authBufSizeComboBoxText) * sizeof(uint8_t) * getBufSizeMultiple((char *)st->guiSt.authBufSizeComboBoxText);
-    makeMultipleOf(&st->cryptSt.genAuthBufSize, sizeof(uint64_t));
 
     st->cryptSt.fileBufSize = atol(st->guiSt.fileBufSizeComboBoxText) * sizeof(uint8_t) * getBufSizeMultiple((char *)st->guiSt.fileBufSizeComboBoxText);
     makeMultipleOf(&st->cryptSt.fileBufSize, sizeof(uint64_t));
@@ -201,7 +197,6 @@ void on_cryptButton_clicked(GtkWidget *wid, gpointer ptr)
             workThread('e', st);
         } else if (strcmp(st->guiSt.encryptOrDecrypt, "decrypt") == 0) {
             strcpy(st->guiSt.statusMessage, "Starting decryption...");
-            // parseCryptoHeader(st);
             workThread('d', st);
         }
     }
@@ -312,7 +307,6 @@ int main(int argc, char *argv[])
     st.cryptSt.pFactor = DEFAULT_SCRYPT_P;
     st.cryptSt.rFactor = DEFAULT_SCRYPT_R;
 
-    st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
 
     /*These must be mapped as shared memory for the worker thread to manipulate their values in the main thread*/
@@ -447,18 +441,6 @@ int main(int argc, char *argv[])
     gtk_widget_set_tooltip_text(st.guiSt.keyFileButton, "Select the key file you want to use here");
     g_signal_connect(st.guiSt.keyFileButton, "clicked", G_CALLBACK(keyFileSelect), (gpointer)&st);
 
-    GtkWidget *authBufSizeLabel = gtk_label_new("Authentication Buffer Size");
-    st.guiSt.authBufSizeComboBox = gtk_combo_box_text_new();
-    gtk_widget_set_tooltip_text(st.guiSt.authBufSizeComboBox, "This controls the size of the buffer used for authenticating data");
-    char authBufSizeComboBoxTextString[15] = {0};
-    number = 1;
-    for (int i = 0; i < 34; i++) {
-        bytesPrefixed(authBufSizeComboBoxTextString, number);
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(st.guiSt.authBufSizeComboBox), authBufSizeComboBoxTextString);
-        number = number << 1;
-    }
-    gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.authBufSizeComboBox), 20);
-
     GtkWidget *fileBufSizeLabel = gtk_label_new("File Buffer Size");
     st.guiSt.fileBufSizeComboBox = gtk_combo_box_text_new();
     gtk_widget_set_tooltip_text(st.guiSt.fileBufSizeComboBox, "This controls the size of the buffer used for encryption/decryption data");
@@ -527,13 +509,6 @@ int main(int argc, char *argv[])
         gtk_adjustment_set_value(GTK_ADJUSTMENT(st.guiSt.pFactorSpinButtonAdj), (gdouble)st.cryptSt.pFactor);
     }
 
-    if (st.optSt.authBufSizeGiven) {
-        char size_string[15];
-        bytesPrefixed(size_string, st.cryptSt.genAuthBufSize);
-        gtk_combo_box_text_prepend(GTK_COMBO_BOX_TEXT(st.guiSt.authBufSizeComboBox), 0, (const gchar *)size_string);
-        gtk_combo_box_set_active(GTK_COMBO_BOX(st.guiSt.authBufSizeComboBox), 0);
-    }
-
     if (st.optSt.fileBufSizeGiven) {
         char size_string[15];
         bytesPrefixed(size_string, st.cryptSt.fileBufSize);
@@ -580,10 +555,8 @@ int main(int argc, char *argv[])
     gtk_grid_attach(GTK_GRID(grid), keyFileLabel, 0, 18, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), st.guiSt.keyFileNameBox, 0, 19, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), st.guiSt.keyFileButton, 1, 19, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), authBufSizeLabel, 0, 24, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), st.guiSt.authBufSizeComboBox, 0, 25, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), fileBufSizeLabel, 1, 24, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), st.guiSt.fileBufSizeComboBox, 1, 25, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), fileBufSizeLabel, 0, 24, 2, 1);
+    gtk_grid_attach(GTK_GRID(grid), st.guiSt.fileBufSizeComboBox, 0, 25, 2, 1);
     gtk_grid_attach(GTK_GRID(grid), encAlgorithmLabel, 0, 26, 2, 1);
     gtk_grid_attach(GTK_GRID(grid), st.guiSt.encAlgorithmComboBox, 0, 27, 2, 1);
     gtk_grid_attach(GTK_GRID(grid), mdAlgorithmLabel, 0, 28, 2, 1);

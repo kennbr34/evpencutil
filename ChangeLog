@@ -1,3 +1,7 @@
+0.3.4
+
+Removed unnecessary features relating to auth-buffer size since it will now coincide with file buffer size
+
 0.3.3
 
 Removed using deprecated HMAC functions to start migrating to OpenSSL 3
