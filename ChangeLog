@@ -1,3 +1,7 @@
+0.3.3
+
+Removed using deprecated HMAC functions to start migrating to OpenSSL 3
+
 0.3.2
 
 Added signal handlers to detect when the child process has crashed

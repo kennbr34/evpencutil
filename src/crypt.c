@@ -4,6 +4,7 @@
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/params.h>
 #include <openssl/hmac.h>
 #include <openssl/kdf.h>
 #include <openssl/rand.h>
@@ -34,19 +35,31 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         exit(EXIT_FAILURE);
     }
 
-    uint32_t HMACLengthPtr = 0;
+    size_t HMACLengthPtr = 0;
 
     EVP_CIPHER_CTX *evp_ctx = evp_ctx = EVP_CIPHER_CTX_new();
     if (evp_ctx == NULL) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
     }
+    
+    OSSL_PARAM params[2];
 
-    HMAC_CTX *mac_ctx = HMAC_CTX_new();
+    params[0] = OSSL_PARAM_construct_utf8_string("digest", (char*)st->cryptSt.mdAlgorithm, 0);
+    params[1] = OSSL_PARAM_construct_end();
+
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
+    if (mac == NULL) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+    
+    EVP_MAC_CTX *mac_ctx = EVP_MAC_CTX_new(mac);
     if (mac_ctx == NULL) {
         ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
     }
-
+    
     while (remainingBytes) {
 
         clock_gettime(CLOCK_REALTIME, &begin);
@@ -59,17 +72,15 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 ERR_print_errors_fp(stderr);
                 exit(EXIT_FAILURE);
             }
-
-            if (!HMAC_CTX_reset(mac_ctx)) {
-                ERR_print_errors_fp(stderr);
-                exit(EXIT_FAILURE);
-            }
         }
 
         EVP_EncryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
         EVP_CIPHER_CTX_set_padding(evp_ctx, 0);
 
-        HMAC_Init_ex(mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, st->cryptSt.evpDigest, NULL);
+        if(!EVP_MAC_init(mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, params)) {
+			ERR_print_errors_fp(stderr);
+            exit(EXIT_FAILURE);
+        }
 
         if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize, inFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -125,17 +136,17 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
             exit(EXIT_FAILURE);
         }
 
-        HMAC_Update(mac_ctx, (const unsigned char *)&st->cryptoHeader, sizeof(st->cryptoHeader));
-        HMAC_Update(mac_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
-        HMAC_Update(mac_ctx, outBuffer, sizeof(*outBuffer) * evpOutputLength);
+        EVP_MAC_update(mac_ctx, (const unsigned char *)&st->cryptoHeader, sizeof(st->cryptoHeader));
+        EVP_MAC_update(mac_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+        EVP_MAC_update(mac_ctx, outBuffer, sizeof(*outBuffer) * evpOutputLength);
 
         if (paddingAmount) {
             st->cryptSt.fileBufSize += paddingAmount;
         }
 
-        HMAC_Update(mac_ctx, (const unsigned char *)&st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
+        EVP_MAC_update(mac_ctx, (const unsigned char *)&st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
 
-        HMAC_Final(mac_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr);
+        EVP_MAC_final(mac_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr, EVP_MAC_CTX_get_mac_size(mac_ctx));
 
         if (fwriteWErrCheck(outBuffer, sizeof(*outBuffer), evpOutputLength, outFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -189,6 +200,7 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Encrypting...", dataRate, st->timeSt.totalTime);
 #endif
         st->timeSt.averageRate = dataRate;
+        
     }
 
     OPENSSL_cleanse(inBuffer, sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
@@ -198,7 +210,8 @@ void doEncrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     DDFREE(free, outBuffer);
 
     DDFREE(EVP_CIPHER_CTX_free, evp_ctx);
-    DDFREE(HMAC_CTX_free, mac_ctx);
+    DDFREE(EVP_MAC_free, mac);
+    DDFREE(EVP_MAC_CTX_free, mac_ctx);
 }
 
 void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct *st)
@@ -224,7 +237,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         remove(st->fileNameSt.outputFileName);
         exit(EXIT_FAILURE);
     }
-    uint32_t HMACLengthPtr = 0;
+    size_t HMACLengthPtr = 0;
 
     EVP_CIPHER_CTX *evp_ctx = evp_ctx = EVP_CIPHER_CTX_new();
     if (evp_ctx == NULL) {
@@ -232,7 +245,18 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
         exit(EXIT_FAILURE);
     }
 
-    HMAC_CTX *mac_ctx = HMAC_CTX_new();
+    OSSL_PARAM params[2];
+
+    params[0] = OSSL_PARAM_construct_utf8_string("digest", (char*)st->cryptSt.mdAlgorithm, 0);
+    params[1] = OSSL_PARAM_construct_end();
+
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
+    if (mac == NULL) {
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+    
+    EVP_MAC_CTX *mac_ctx = EVP_MAC_CTX_new(mac);
     if (mac_ctx == NULL) {
         ERR_print_errors_fp(stderr);
         exit(EXIT_FAILURE);
@@ -249,18 +273,16 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
                 ERR_print_errors_fp(stderr);
                 exit(EXIT_FAILURE);
             }
-
-            if (!HMAC_CTX_reset(mac_ctx)) {
-                ERR_print_errors_fp(stderr);
-                exit(EXIT_FAILURE);
-            }
         }
 
         EVP_DecryptInit_ex(evp_ctx, st->cryptSt.evpCipher, NULL, st->cryptSt.evpKey, st->cryptSt.hmacKey);
         uint8_t cipherBlockSize = EVP_CIPHER_CTX_get_block_size(evp_ctx);
         EVP_CIPHER_CTX_set_padding(evp_ctx, 0);
 
-        HMAC_Init_ex(mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, st->cryptSt.evpDigest, NULL);
+        if(!EVP_MAC_init(mac_ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, params)) {
+			ERR_print_errors_fp(stderr);
+            exit(EXIT_FAILURE);
+        }
 
         if (freadWErrCheck(inBuffer, sizeof(*inBuffer), st->cryptSt.fileBufSize + EVP_MAX_MD_SIZE, inFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
@@ -290,12 +312,12 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 
         uint32_t evpOutputLength = 0;
 
-        HMAC_Update(mac_ctx, (const unsigned char *)&st->cryptoHeader, sizeof(st->cryptoHeader));
-        HMAC_Update(mac_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
-        HMAC_Update(mac_ctx, inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize);
-        HMAC_Update(mac_ctx, (const unsigned char *)&st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
+        EVP_MAC_update(mac_ctx, (const unsigned char *)&st->cryptoHeader, sizeof(st->cryptoHeader));
+        EVP_MAC_update(mac_ctx, st->cryptSt.passKeyedHash, sizeof(*st->cryptSt.passKeyedHash) * PASS_KEYED_HASH_SIZE);
+        EVP_MAC_update(mac_ctx, inBuffer, sizeof(*inBuffer) * st->cryptSt.fileBufSize);
+        EVP_MAC_update(mac_ctx, (const unsigned char *)&st->cryptSt.fileBufSize, sizeof(st->cryptSt.fileBufSize));
 
-        HMAC_Final(mac_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr);
+        EVP_MAC_final(mac_ctx, st->cryptSt.generatedMAC, &HMACLengthPtr, EVP_MAC_CTX_get_mac_size(mac_ctx));
 
         if (CRYPTO_memcmp(st->cryptSt.fileMAC, st->cryptSt.generatedMAC, HMACLengthPtr) != 0) {
             printf("Message authentication failed\n");
@@ -378,6 +400,7 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
 #endif
         st->timeSt.averageRate = dataRate;
         loopIterations++;
+        
     }
 
     OPENSSL_cleanse(inBuffer, sizeof(*inBuffer) * (st->cryptSt.fileBufSize + EVP_MAX_BLOCK_LENGTH));
@@ -387,7 +410,8 @@ void doDecrypt(FILE *inFile, FILE *outFile, uint64_t fileSize, struct dataStruct
     DDFREE(free, outBuffer);
 
     DDFREE(EVP_CIPHER_CTX_free, evp_ctx);
-    DDFREE(HMAC_CTX_free, mac_ctx);
+    DDFREE(EVP_MAC_CTX_free, mac_ctx);
+    DDFREE(EVP_MAC_free, mac);
 }
 
 void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
@@ -470,70 +494,6 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     DDFREE(EVP_MD_CTX_free, ctx);
     OPENSSL_cleanse(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
     DDFREE(free, keyFileHashBuffer);
-}
-
-void genHMAC(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
-{
-#ifdef gui
-    *(st->guiSt.progressFraction) = 0.0;
-#endif
-
-    uint8_t *genAuthBuffer = calloc(st->cryptSt.genAuthBufSize, sizeof(*genAuthBuffer));
-    if (genAuthBuffer == NULL) {
-        PRINT_SYS_ERROR(errno);
-        PRINT_ERROR("Could not allocate memory for genAuthBuffer");
-        remove(st->fileNameSt.outputFileName);
-        exit(EXIT_FAILURE);
-    }
-    uint64_t remainingBytes = fileSize;
-    uint64_t bytesRead = 0;
-
-    HMAC_CTX *ctx = HMAC_CTX_new();
-    HMAC_Init_ex(ctx, st->cryptSt.hmacKey, HMAC_KEY_SIZE, st->cryptSt.evpDigest, NULL);
-
-    uint64_t i;
-    for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
-
-#ifdef gui
-        struct timespec begin, end;
-        clock_gettime(CLOCK_REALTIME, &begin);
-        st->guiSt.startLoop = begin.tv_nsec / 1000000000.0 + begin.tv_sec;
-
-        st->guiSt.startBytes = bytesRead;
-#endif
-
-        if (st->cryptSt.genAuthBufSize > remainingBytes) {
-            st->cryptSt.genAuthBufSize = remainingBytes;
-        }
-
-        if (freadWErrCheck(genAuthBuffer, sizeof(*genAuthBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
-            PRINT_SYS_ERROR(st->miscSt.returnVal);
-            PRINT_ERROR("Could not generate HMAC");
-            exit(EXIT_FAILURE);
-        }
-        HMAC_Update(ctx, genAuthBuffer, sizeof(*genAuthBuffer) * st->cryptSt.genAuthBufSize);
-
-        bytesRead += st->cryptSt.genAuthBufSize;
-        remainingBytes -= st->cryptSt.genAuthBufSize;
-#ifdef gui
-        *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
-
-        st->guiSt.endBytes = bytesRead;
-        st->guiSt.totalBytes = st->guiSt.endBytes;
-
-        clock_gettime(CLOCK_REALTIME, &end);
-        st->guiSt.endLoop = end.tv_nsec / 1000000000.0 + end.tv_sec;
-
-        st->guiSt.loopTime = st->guiSt.endLoop - st->guiSt.startLoop;
-        st->guiSt.totalTime += st->guiSt.loopTime;
-
-        double dataRate = (double)((double)st->guiSt.totalBytes / (double)st->guiSt.totalTime) / (1024 * 1024);
-        sprintf(st->guiSt.statusMessage, "%s %0.0f Mb/s, %0.0fs elapsed", "Authenticating data...", dataRate, st->guiSt.totalTime);
-#endif
-    }
-    HMAC_Final(ctx, st->cryptSt.generatedMAC, (unsigned int *)&fileSize);
-    DDFREE(HMAC_CTX_free, ctx);
-    DDFREE(free, genAuthBuffer);
 }
 
 void genChunkKey(struct dataStruct *st)
