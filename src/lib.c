@@ -527,7 +527,7 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
             return 1;
         }
 
-        fprintf(benchmarkFile, "Mode,Cipher,Digest,File Buffer,Auth Buffer,Elapsed\(s),Throughput(MB/s),CPU,\n");
+        fprintf(benchmarkFile, "Mode,Cipher,Digest,File Buffer,Elapsed\(s),Throughput(MB/s),CPU,\n");
     } else {
         benchmarkFile = fopen(benchmarkFileName, "a");
         if (benchmarkFile == NULL) {
@@ -540,7 +540,6 @@ int writeBenchmark(double time, double rate, struct dataStruct *st)
     fprintf(benchmarkFile, "%s,", st->cryptSt.encAlgorithm);
     fprintf(benchmarkFile, "%s,", st->cryptSt.mdAlgorithm);
     fprintf(benchmarkFile, "%zu,", st->cryptSt.fileBufSize);
-    fprintf(benchmarkFile, "%zu,", st->cryptSt.genAuthBufSize);
     fprintf(benchmarkFile, "%0.2f,", time);
     fprintf(benchmarkFile, rate < 1 ? "%0.2f," : "%f,", rate);
     char *cpuName = getCpuName();
@@ -746,8 +745,8 @@ void parseOptions(
                 errflg++;
                 break;
             } else {
-                st->optSt.authBufSizeGiven = true;
-                st->cryptSt.genAuthBufSize = atol(value) * sizeof(uint8_t) * getBufSizeMultiple(value);
+                st->optSt.fileBufSizeGiven = true;
+                st->cryptSt.fileBufSize = atol(optarg) * sizeof(uint8_t) * getBufSizeMultiple(optarg);
             }
             break;
         case 'c':

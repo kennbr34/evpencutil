@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
     st.cryptSt.pFactor = DEFAULT_SCRYPT_P;
     st.cryptSt.rFactor = DEFAULT_SCRYPT_R;
 
-    st.cryptSt.genAuthBufSize = 1024 * 1024;
     st.cryptSt.fileBufSize = 1024 * 1024;
 
     parseOptions(argc, argv, &st);

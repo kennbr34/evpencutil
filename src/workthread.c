@@ -131,8 +131,6 @@ int workThread(char action, struct dataStruct *st)
                 genKeyFileHash(keyFile, getFileSize(st->fileNameSt.keyFileName), st);
             }
             fclose(keyFile);
-            fclose(keyFile);
-
 #ifdef gui
             strcpy(st->guiSt.statusMessage, "Generating encryption key...");
             *(st->guiSt.overallProgressFraction) = .3;

@@ -420,7 +420,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     *(st->guiSt.progressFraction) = 0.0;
 #endif
 
-    uint8_t *keyFileHashBuffer = calloc(st->cryptSt.genAuthBufSize, sizeof(*keyFileHashBuffer));
+    uint8_t *keyFileHashBuffer = calloc(st->cryptSt.fileBufSize, sizeof(*keyFileHashBuffer));
     if (keyFileHashBuffer == NULL) {
         PRINT_SYS_ERROR(errno);
         PRINT_ERROR("Could not allocate memory for keyFileHashBuffer");
@@ -432,9 +432,11 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_get_digestbyname(st->cryptSt.mdAlgorithm), NULL);
+    
+    uint64_t bufferSize = st->cryptSt.fileBufSize;
 
     uint64_t i;
-    for (i = 0; remainingBytes; i += st->cryptSt.genAuthBufSize) {
+    for (i = 0; remainingBytes; i += bufferSize) {
 
 #ifdef gui
         struct timespec begin, end;
@@ -444,15 +446,15 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         st->guiSt.startBytes = bytesRead;
 #endif
 
-        if (st->cryptSt.genAuthBufSize > remainingBytes) {
-            st->cryptSt.genAuthBufSize = remainingBytes;
+        if (bufferSize > remainingBytes) {
+            bufferSize = remainingBytes;
         }
 
-        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer), st->cryptSt.genAuthBufSize, dataFile, st) != 0) {
+        if (freadWErrCheck(keyFileHashBuffer, sizeof(*keyFileHashBuffer), bufferSize, dataFile, st) != 0) {
             PRINT_SYS_ERROR(st->miscSt.returnVal);
             PRINT_ERROR("Could not generate keyFile Hash");
 
-            OPENSSL_cleanse(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
+            OPENSSL_cleanse(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * bufferSize);
 
             remove(st->fileNameSt.outputFileName);
 
@@ -462,17 +464,17 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
         amountReadLast = st->miscSt.freadAmt;
         bytesRead += amountReadLast;
 
-        if (amountReadLast < st->cryptSt.genAuthBufSize) {
+        if (amountReadLast < bufferSize) {
             remainingBytes = 0;
-            st->cryptSt.genAuthBufSize = amountReadLast;
+            bufferSize = amountReadLast;
         } else {
-            remainingBytes -= st->cryptSt.genAuthBufSize;
+            remainingBytes -= bufferSize;
         }
 
-        EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
+        EVP_DigestUpdate(ctx, keyFileHashBuffer, sizeof(*keyFileHashBuffer) * bufferSize);
 
-        bytesRead += st->cryptSt.genAuthBufSize;
-        remainingBytes -= st->cryptSt.genAuthBufSize;
+        bytesRead += bufferSize;
+        remainingBytes -= bufferSize;
 
 #ifdef gui
         *(st->guiSt.progressFraction) = (double)i / (double)fileSize;
@@ -492,7 +494,7 @@ void genKeyFileHash(FILE *dataFile, uint64_t fileSize, struct dataStruct *st)
     }
     EVP_DigestFinal_ex(ctx, st->cryptSt.keyFileHash, NULL);
     DDFREE(EVP_MD_CTX_free, ctx);
-    OPENSSL_cleanse(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * st->cryptSt.genAuthBufSize);
+    OPENSSL_cleanse(keyFileHashBuffer, sizeof(*keyFileHashBuffer) * bufferSize);
     DDFREE(free, keyFileHashBuffer);
 }
 
